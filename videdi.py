@@ -239,7 +239,8 @@ class Videdi:
         self.hide_all_button()
 
         # 自動カット処理をスレッディング
-        self.thread = threading.Thread(target=self.jumpcut)
+        # self.thread = threading.Thread(target=self.jumpcut)
+        self.thread = threading.Thread(target=videdi_jumpcut.jumpcut, args=(self, ))
         self.thread.start()
         return
 
@@ -507,4 +508,5 @@ def main():
 if __name__ == '__main__':
     # other files
     import videdi_log
+    import videdi_jumpcut
     main()
