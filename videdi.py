@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import *
 import tkinter.font as font
-from tkinter import filedialog
 import os
 import subprocess
 import threading
@@ -16,6 +15,8 @@ if APP_PATH == "":
 
 class Videdi:
     def __init__(self, width=800, height=500):
+        self.utility = videdi_utility.utility()
+
         # TKクラスをインスタンス化
         self.root = tk.Tk()
         # ウィンドウのタイトルを設定
@@ -72,7 +73,7 @@ class Videdi:
         self.sf_button_pos_y = pos_y + height + 15
         self.sf_button_height = 25
         self.sf_button_relwidth = 0.2
-        self.select_folder_button = tk.Button(text='フォルダの選択', command=self.select_folder,
+        self.select_folder_button = tk.Button(text='フォルダの選択', command=self.select_folder_button,
                                               font=button_font,
                                               highlightbackground=button_background, fg='black', highlightthickness=0)
         self.select_folder_button.place(relx=(1 - self.sf_button_relwidth) / 2, y=self.sf_button_pos_y,
@@ -158,62 +159,6 @@ class Videdi:
         elif event.delta < 0:
             self.frame.canvas.yview_scroll(1, 'units')
 
-    # フォルダ選択処理
-    def select_folder(self):
-        folder = self.folder_dir
-        if len(folder) == 0:
-            idir = os.path.abspath(os.path.dirname(__file__))
-        else:
-            idir = os.path.abspath(os.path.dirname(folder))
-        # ジャンプカット動画作成・音声テキスト作成・字幕付き動画作成ボタン非表示化
-        self.jumpcut_button.configure(state='disabled')
-        self.speech_to_text_button.configure(state='disabled')
-        self.add_subtitle_button.configure(state='disabled')
-
-        self.folder_dir = filedialog.askdirectory(initialdir=idir)
-        if len(self.folder_dir) == 0:
-            self.folder_dir = folder
-        if os.path.exists(self.folder_dir):
-            if len(self.folder_dir) > self.folder_name_min:
-                s = self.folder_dir.split('/')
-                folder_name = s[-1]
-            else:
-                folder_name = self.folder_dir
-            if self.search_videos(self.folder_dir) != []:
-                self.current_folder_var.set(folder_name + 'フォルダを選択中')
-                # ジャンプカット動画作成・音声テキスト作成・字幕付き動画作成ボタン表示
-                self.jumpcut_button.configure(state='normal')
-                self.speech_to_text_button.configure(state='normal')
-                self.add_subtitle_button.configure(state='normal')
-            else:
-                self.current_folder_var.set(folder_name + 'フォルダには処理できる動画ファイルがありません。')
-        else:
-            self.current_folder_var.set('フォルダが選択されていません。')
-        return
-
-    # 指定フォルダ内のvideoファイル名取得
-    def search_videos(self, search_dir):
-        files = os.listdir(search_dir)
-        files = [i for i in files if i[-4:].lower() == '.mov' or i[-4:].lower() == '.mp4']
-        return sorted(files)
-
-    # フォルダを作成
-    def make_folder(self, s):
-        if os.path.exists('./' + s):
-            i = 2
-            while True:
-                if not (os.path.exists('./' + s + str(i))):
-                    new_folder = './' + s + str(i)
-                    os.mkdir('./' + s + str(i))
-                    break
-                i += 1
-        else:
-            new_folder = './' + s
-            os.mkdir('./' + s)
-
-        self.frame.set_log(new_folder.split('/')[-1] + 'フォルダ作成')
-        return new_folder
-
     # ボタン非表示化
     def hide_all_button(self):
         self.select_folder_button.configure(state='disabled')
@@ -232,12 +177,15 @@ class Videdi:
         self.add_subtitle_button.configure(state='normal')
         return
 
+    # フォルダ選択ボタンの処理
+    def select_folder_button(self):
+        self.utility.select_folder(self)
+        return
+
     # ジャンプカット動画作成ボタンの処理
     def jumpcut_button(self):
-
         # ボタン非表示化
         self.hide_all_button()
-
         # 自動カット処理をスレッディング
         self.thread = threading.Thread(target=videdi_jumpcut.jumpcut, args=(self, ))
         self.thread.start()
@@ -256,7 +204,7 @@ class Videdi:
     def speech_to_text(self):
         # 音声テキスト作成開始ログ
         self.frame.set_big_log(self.folder_dir.split('/')[-1] + 'フォルダ内の動画の音声テキスト作成開始')
-        video_list = self.search_videos(self.folder_dir)
+        video_list = self.utility.search_videos(self.folder_dir)
         # 音声認識処理
         self.speech_recognize(self.folder_dir, video_list)
         # ボタンを再表示
@@ -268,7 +216,7 @@ class Videdi:
     # 音声認識処理
     def speech_recognize(self, video_dir, video_list):
         os.chdir(video_dir)
-        text_folder = self.make_folder(video_dir.split('/')[-1] + '_sub')
+        text_folder = self.utility.make_folder(self, video_dir.split('/')[-1] + '_sub')
         os.mkdir('.tmp')
         for i, video in enumerate(video_list):
             try:
@@ -305,7 +253,7 @@ class Videdi:
         # 音声テキスト作成開始ログ
         self.frame.set_big_log(self.folder_dir.split('/')[-1] + 'フォルダ内の動画の字幕付き動画作成開始')
         os.chdir(self.folder_dir)
-        video_list = self.search_videos(self.folder_dir)
+        video_list = self.utility.search_videos(self.folder_dir)
         os.mkdir('.tmp')
         for i, video in enumerate(video_list):
             self.frame.set_log(video + 'の字幕付き動画作成開始 ' + str(i+1) + '/' + str(len(video_list)))
@@ -316,7 +264,7 @@ class Videdi:
             self.frame.set_log(video + 'の音声認識のために動画をカット')
             shutil.copyfile(video, '.tmp/' + video)
             jumpcut_folder = videdi_jumpcut.cut_video(self, self.folder_dir + '/.tmp', video_sections, video)
-            jumpcut_video_list = self.search_videos(jumpcut_folder)
+            jumpcut_video_list = self.utility.search_videos(jumpcut_folder)
             self.speech_recognize(jumpcut_folder, jumpcut_video_list)
             texts_path = './.tmp/' + jumpcut_folder.split('/')[-1] + '/' + jumpcut_folder.split('/')[-1] + '_sub'
             self.make_srt(self.folder_dir, texts_path, video, video_sections)
@@ -378,4 +326,5 @@ if __name__ == '__main__':
     # other files
     import videdi_log
     import videdi_jumpcut
+    import videdi_utility
     main()

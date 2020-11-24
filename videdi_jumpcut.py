@@ -13,7 +13,7 @@ def jumpcut(videdi):
     videdi.frame.set_big_log(videdi.folder_dir.split('/')[-1] + 'フォルダ内の動画のジャンプカット動画作成開始')
     os.chdir(videdi.folder_dir)
     video_dir = os.path.abspath(videdi.folder_dir)
-    video_list = videdi.search_videos(videdi.folder_dir)
+    video_list = videdi.utility.search_videos(videdi.folder_dir)
     for i, video in enumerate(video_list):
         videdi.frame.set_log('')
         videdi.frame.set_log(video + 'のジャンプカット動画作成開始 ' + str(i + 1) + '/' + str(len(video_list)))
@@ -130,7 +130,7 @@ def cut_video(videdi, video_dir, sections, video):
     os.chdir(video_dir)
     digit = len(str(len(sections)))
     video_name = video.split('.')[0]
-    jumpcut_folder = videdi.make_folder(video_name + '_jumpcut')
+    jumpcut_folder = videdi.utility.make_folder(videdi, video_name + '_jumpcut')
     for i in range(len(sections)):
         split_file = jumpcut_folder + '/' + video_name + '_' + format(i + 1, '0>' + str(digit)) + '.mp4'
         subprocess.run(
