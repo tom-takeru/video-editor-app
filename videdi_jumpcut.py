@@ -10,7 +10,6 @@ if APP_PATH == "":
 # フォルダ内の動画をジャンプカット
 def jumpcut(videdi):
     # ジャンプカット開始
-    print("videdi_jumpcut内部----------------------")
     videdi.frame.set_big_log(videdi.folder_dir.split('/')[-1] + 'フォルダ内の動画のジャンプカット動画作成開始')
     os.chdir(videdi.folder_dir)
     video_dir = os.path.abspath(videdi.folder_dir)
@@ -18,19 +17,19 @@ def jumpcut(videdi):
     for i, video in enumerate(video_list):
         videdi.frame.set_log('')
         videdi.frame.set_log(video + 'のジャンプカット動画作成開始 ' + str(i + 1) + '/' + str(len(video_list)))
-        cut_sections = videdi.silence_sections(video)
+        cut_sections = silence_sections(videdi, video)
         print('\ncut_sections')
         print(cut_sections)
         if len(cut_sections) == 0:
             videdi.frame.set_log(video + 'には無音部分がありませんでした。')
             continue
-        video_sections = videdi.leave_sections(cut_sections, video)
+        video_sections = leave_sections(videdi, cut_sections, video)
         print('\nleave_sections')
         print(video_sections)
-        video_sections = videdi.arrange_sections(video_sections, videdi.min_time, videdi.margin_time)
+        video_sections = arrange_sections(videdi, video_sections, videdi.min_time, videdi.margin_time)
         print('\narrange_sections')
         print(video_sections)
-        videdi.cut_video(video_dir, video_sections, video)
+        cut_video(videdi, video_dir, video_sections, video)
         videdi.frame.set_log(video + 'のジャンプカット動画作成完了')
 
     # ボタンを再表示
