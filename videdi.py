@@ -118,7 +118,7 @@ class ScrollFrame(ClassFrame):
 
 
 class Videdi:
-    def __init__(self, width=800, height=500):
+    def __init__(self, width=800, height=550):
         # TKクラスをインスタンス化
         self.root = tk.Tk()
         # ウィンドウのタイトルを設定
@@ -140,7 +140,7 @@ class Videdi:
                            + '+' + str(self.window_pos_x) + '+' + str(self.window_pos_y))
 
         # ウィンドウの背景の色を設定
-        window_bg = '#'+'ec'*3
+        window_bg = '#ececec'
         self.root.configure(bg=window_bg)
         # ウィンドウの枠を指定
         self.root.configure(borderwidth=10, relief=RIDGE)
@@ -150,9 +150,6 @@ class Videdi:
         button_font = font.Font(self.root, size=14)
         process_button_fg = 'red'
         button_background = window_bg
-
-        # スレッド
-        self.thread = None
 
         # タイトルラベル
         pos_y = 0
@@ -172,6 +169,7 @@ class Videdi:
         self.current_folder_lab.place(x=0, y=pos_y, relwidth=1.0, height=height)
 
         # フォルダ選択ボタン
+        self.fld_bln = False
         self.sf_button_pos_y = pos_y + height + 15
         self.sf_button_height = 25
         self.sf_button_relwidth = 0.2
@@ -180,7 +178,6 @@ class Videdi:
                                               highlightbackground=button_background, fg='black', highlightthickness=0)
         self.select_folder_button.place(relx=(1 - self.sf_button_relwidth) / 2, y=self.sf_button_pos_y,
                                         relwidth=self.sf_button_relwidth, height=self.sf_button_height)
-        self.select_folder_button.configure(relief=FLAT)
 
         # スクロール式のログラベル
         self.scroll_pos_y = self.sf_button_pos_y + self.sf_button_height + 15
@@ -204,48 +201,49 @@ class Videdi:
         self.log_reset_button.place(relx=self.lr_button_relx, y=self.lr_button_pos_y,
                                     relwidth=self.lr_button_relwidth, height=self.lr_button_height)
 
+
+        # 処理選択ラベル
+        self.run_choices_pos_y = self.scroll_pos_y + self.scroll_height + 20
+        self.run_choices_lab = tk.Label(text='処理選択', font=bold_font)
+        self.run_choices_lab.place(relx=0.05, y=self.run_choices_pos_y)
+
+        # ジャンプカットチェックボタン
+        self.jc_bln = tk.BooleanVar()
+        self.jc_bln.set(True)
+        self.jc_chk_button = tk.Checkbutton(self.root, variable=self.jc_bln, text='ジャンプカット',state='disable', command=self.check_state)
+        self.jc_chk_button.place(relx=0.15, y=self.run_choices_pos_y)
+
+        # 字幕付けチェックボタン
+        self.addsub_bln = tk.BooleanVar()
+        self.addsub_bln.set(False)
+        self.addsub_chk_button = tk.Checkbutton(self.root, variable=self.addsub_bln, text='字幕付け', state='disable', command=self.check_state)
+        self.addsub_chk_button.place(relx=0.3, y=self.run_choices_pos_y)
+
+        # オプション選択rベル
+        self.option_pos_y = self.run_choices_pos_y + 30
+        self.option_lab = tk.Label(text='オプション', font=bold_font)
+        self.option_lab.place(relx=0.05, y=self.option_pos_y)
+
+        # 修正チェックボタン
+        self.modi_bln = tk.BooleanVar()
+        self.modi_bln.set(False)
+        self.modi_chk_button = tk.Checkbutton(self.root, variable=self.modi_bln, text='修正', state='disable')
+        self.modi_chk_button.place(relx=0.15, y=self.option_pos_y)
+
         # ジャンプカット動画の最小時間を設定(単位:秒)
         self.min_time = 0.5
         # ジャンプカット動画の前後の余裕を設定(単位:秒)
         self.margin_time = 0.1
 
-        # ジャンプカット動画作成ボタン
-        self.jc_button_relx = 0.05
-        self.jc_button_pos_y = self.scroll_pos_y + self.scroll_height + 25
-        self.jc_button_height = 25
-        self.jc_button_relwidth = 0.2
-        self.jumpcut_button = tk.Button(text='ジャンプカット動画作成', command=self.jumpcut_button,
+        # 実行ボタン
+        self.run_button_pos_y = self.option_pos_y + 30
+        self.run_button_height = 25
+        self.run_button_relwidth = 0.1
+        self.run_button = tk.Button(text='実行', state='disable', command=self.run_button,
                                         font=button_font,
                                         highlightbackground=button_background, fg=process_button_fg, highlightthickness=0)
-        self.jumpcut_button.place(relx=self.jc_button_relx, y=self.jc_button_pos_y,
-                                  relwidth=self.jc_button_relwidth, height=self.jc_button_height)
-        self.jumpcut_button.configure(state='disabled')
-
-        # 音声テキスト作成ボタン
-        self.stt_button_relx = self.jc_button_relx + self.jc_button_relwidth * 1.1
-        self.stt_button_pos_y = self.jc_button_pos_y
-        self.stt_button_height = 25
-        self.stt_button_relwidth = 0.15
-        self.speech_to_text_button = tk.Button(text='音声テキスト作成', command=self.speech_to_text_button,
-                                        font=button_font,
-                                        highlightbackground=button_background, fg=process_button_fg, highlightthickness=0)
-        self.speech_to_text_button.place(relx=self.stt_button_relx, y=self.stt_button_pos_y,
-                                         relwidth=self.stt_button_relwidth, height=self.stt_button_height)
-        self.speech_to_text_button.configure(state='disabled')
-
-        # 字幕付き動画作成ボタン
-        self.as_button_relx = self.stt_button_relx + self.stt_button_relwidth * 1.1
-        self.as_button_pos_y = self.jc_button_pos_y
-        self.as_button_height = 25
-        self.as_button_relwidth = 0.15
-        self.add_subtitle_button = tk.Button(text='字幕付き動画作成', command=self.add_subtitle_button,
-                                        font=button_font,
-                                        highlightbackground=button_background, fg=process_button_fg, highlightthickness=0)
-        self.add_subtitle_button.place(relx=self.as_button_relx, y=self.as_button_pos_y,
-                                       relwidth=self.as_button_relwidth, height=self.as_button_height)
-        self.add_subtitle_button.configure(state='disabled')
-
-
+        self.run_button.place(relx=(1 - self.run_button_relwidth) / 2, y=self.run_button_pos_y,
+                                  relwidth=self.run_button_relwidth, height=self.run_button_height)
 
         # メインループでイベント待ち
         if __name__ == '__main__':
@@ -270,11 +268,12 @@ class Videdi:
             idir = os.path.abspath(os.path.dirname(__file__))
         else:
             idir = os.path.abspath(os.path.dirname(folder))
-        # ジャンプカット動画作成・音声テキスト作成・字幕付き動画作成ボタン非表示化
-        self.jumpcut_button.configure(state='disabled')
-        self.speech_to_text_button.configure(state='disabled')
-        self.add_subtitle_button.configure(state='disabled')
-
+        self.fld_bln = False
+        # ボタン非表示化
+        self.jc_chk_button.configure(state='disable')
+        self.addsub_chk_button.configure(state='disable')
+        self.modi_chk_button.configure(state='disable')
+        self.run_button.configure(state='disabled')
         self.folder_dir = filedialog.askdirectory(initialdir=idir)
         if len(self.folder_dir) == 0:
             self.folder_dir = folder
@@ -286,10 +285,12 @@ class Videdi:
                 folder_name = self.folder_dir
             if self.search_videos(self.folder_dir) != []:
                 self.current_folder_var.set(folder_name + 'フォルダを選択中')
+                self.fld_bln = True
                 # ジャンプカット動画作成・音声テキスト作成・字幕付き動画作成ボタン表示
-                self.jumpcut_button.configure(state='normal')
-                self.speech_to_text_button.configure(state='normal')
-                self.add_subtitle_button.configure(state='normal')
+                self.jc_chk_button.configure(state='normal')
+                self.addsub_chk_button.configure(state='normal')
+                self.modi_chk_button.configure(state='normal')
+                self.run_button.configure(state='normal')
             else:
                 self.current_folder_var.set(folder_name + 'フォルダには処理できる動画ファイルがありません。')
         else:
@@ -323,29 +324,50 @@ class Videdi:
     def hide_all_button(self):
         self.select_folder_button.configure(state='disabled')
         self.log_reset_button.configure(state='disabled')
-        self.jumpcut_button.configure(state='disabled')
-        self.speech_to_text_button.configure(state='disabled')
-        self.add_subtitle_button.configure(state='disabled')
+        self.jc_chk_button.configure(state='disable')
+        self.addsub_chk_button.configure(state='disable')
+        self.modi_chk_button.configure(state='disable')
+        self.run_button.configure(state='disable')
         return
 
     # ボタン再表示
     def put_all_button(self):
         self.select_folder_button.configure(state='normal')
         self.log_reset_button.configure(state='normal')
-        self.jumpcut_button.configure(state='normal')
-        self.speech_to_text_button.configure(state='normal')
-        self.add_subtitle_button.configure(state='normal')
+        self.jc_chk_button.configure(state='normal')
+        self.addsub_chk_button.configure(state='normal')
+        self.modi_chk_button.configure(state='normal')
+        self.run_button.configure(state='normal')
         return
 
-    # ジャンプカット動画作成ボタンの処理
-    def jumpcut_button(self):
+    # 処理のチェックボタンの状態を確認
+    def check_state(self):
+        # 処理実行ボタンが実行可能か判定
+        if self.fld_bln and (self.jc_bln.get() or self.addsub_bln.get()):
+            self.run_button.configure(state='normal')
+        else:
+            self.run_button.configure(state='disable')
+        # 修正のオプションが選択可能か判定
+        if self.addsub_bln.get():
+            self.modi_chk_button.configure(state='normal')
+        else:
+            self.modi_chk_button.configure(state='disable')
+        return
 
+    # 処理実行ボタンの処理
+    def run_button(self):
         # ボタン非表示化
         self.hide_all_button()
-
-        # 自動カット処理をスレッディング
-        self.thread = threading.Thread(target=self.jumpcut)
-        self.thread.start()
+        if self.jc_bln.get():
+            if self.addsub_bln.get():
+                self.frame.set_log('まだ実装されていません')
+                self.put_all_button()
+            else:
+                thread = threading.Thread(target=self.jumpcut)
+                thread.start()
+        elif self.addsub_bln.get():
+            thread = threading.Thread(target=self.add_subtitle)
+            thread.start()
         return
 
     # フォルダ内の動画をジャンプカット
@@ -478,27 +500,18 @@ class Videdi:
                 self.frame.set_log(video + '   ' + str(int(((i+1) * 100) / len(sections))) + '%完了')
         return jumpcut_folder
 
-    # 音声テキスト作成ボタンの処理
-    def speech_to_text_button(self):
-        # ボタン非表示化
-        self.hide_all_button()
-        # 音声テキスト作成処理をスレッディング
-        self.thread = threading.Thread(target=self.speech_to_text)
-        self.thread.start()
-        return
-
-    # 音声テキスト作成
-    def speech_to_text(self):
-        # 音声テキスト作成開始ログ
-        self.frame.set_big_log(self.folder_dir.split('/')[-1] + 'フォルダ内の動画の音声テキスト作成開始')
-        video_list = self.search_videos(self.folder_dir)
-        # 音声認識処理
-        self.speech_recognize(self.folder_dir, video_list)
-        # ボタンを再表示
-        self.put_all_button()
-        # 音声テキスト作成完了ログ
-        self.frame.set_big_log(self.folder_dir.split('/')[-1] + 'フォルダ内の動画の音声テキスト作成完了')
-        return
+    # # 音声テキスト作成
+    # def speech_to_text(self):
+    #     # 音声テキスト作成開始ログ
+    #     self.frame.set_big_log(self.folder_dir.split('/')[-1] + 'フォルダ内の動画の音声テキスト作成開始')
+    #     video_list = self.search_videos(self.folder_dir)
+    #     # 音声認識処理
+    #     self.speech_recognize(self.folder_dir, video_list)
+    #     # ボタンを再表示
+    #     self.put_all_button()
+    #     # 音声テキスト作成完了ログ
+    #     self.frame.set_big_log(self.folder_dir.split('/')[-1] + 'フォルダ内の動画の音声テキスト作成完了')
+    #     return
 
     # 音声認識処理
     def speech_recognize(self, video_dir, video_list):
@@ -524,15 +537,6 @@ class Videdi:
                 self.frame.set_log(video + 'から音声は検出できませんでした ' + str(int((i+1)*100/len(video_list))) + '%完了')
         os.rmdir('.tmp')
         os.chdir(self.folder_dir)
-        return
-
-    # 字幕付き動画作成ボタンの処理
-    def add_subtitle_button(self):
-        # ボタン非表示化
-        self.hide_all_button()
-        # 字幕付き動画作成処理をスレッディング
-        self.thread = threading.Thread(target=self.add_subtitle)
-        self.thread.start()
         return
 
     # 字幕付き動画作成
