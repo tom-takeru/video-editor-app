@@ -206,42 +206,51 @@ class Videdi:
         self.run_choices_lab = tk.Label(text='処理選択', font=bold_font)
         self.run_choices_lab.place(relx=0.05, y=self.run_choices_pos_y)
 
-        # ジャンプカットチェックボタン
-        self.jc_bln = tk.BooleanVar()
-        self.jc_bln.set(True)
-        self.jc_chk_button = tk.Checkbutton(self.root, variable=self.jc_bln, text='ジャンプカット',state='disable', command=self.check_state)
-        self.jc_chk_button.place(relx=0.15, y=self.run_choices_pos_y)
+        # 処理のドロップダウンメニュー
+        self.process_list = ['ジャンプカット', '字幕をつける', 'ジャンプカットして字幕をつける']
+        self.variable = tk.StringVar(self.root)
+        self.variable.set(self.process_list[0])
+        self.variable.trace("w", self.put_options)
+        self.process_opt = tk.OptionMenu(self.root, self.variable, *self.process_list)
+        self.process_opt.config(width=19)
+        self.process_opt.place(relx=0.15, y=self.run_choices_pos_y)
+        self.process_opt.config(state='disable')
 
-        # 字幕付けチェックボタン
-        self.addsub_bln = tk.BooleanVar()
-        self.addsub_bln.set(False)
-        self.addsub_chk_button = tk.Checkbutton(self.root, variable=self.addsub_bln, text='字幕付け', state='disable', command=self.check_state)
-        self.addsub_chk_button.place(relx=0.3, y=self.run_choices_pos_y)
 
-        # オプション選択rベル
+        # 確認用-------------
+        self.labelTest = tk.Label(text="", font=('Helvetica', 12), fg='red')
+        self.labelTest.place(relx=0.5, y=self.run_choices_pos_y)
+        # ------------------
+
+        # オプション選択ラベル
         self.option_pos_y = self.run_choices_pos_y + 30
         self.option_lab = tk.Label(text='オプション', font=bold_font)
         self.option_lab.place(relx=0.05, y=self.option_pos_y)
 
-        # 修正チェックボタン
-        self.modi_bln = tk.BooleanVar()
-        self.modi_bln.set(False)
-        self.modi_chk_button = tk.Checkbutton(self.root, variable=self.modi_bln, text='修正', state='disable')
-        self.modi_chk_button.place(relx=0.15, y=self.option_pos_y)
-
+        # ジャンプカット修正チェックボックス
+        self.jc_modi_bln = tk.BooleanVar()
+        self.jc_modi_bln.set(False)
+        self.jc_modi_chk = tk.Checkbutton(self.root, variable=self.jc_modi_bln, text='ジャンプカット修正')
         # ジャンプカット動画の最小時間を設定(単位:秒)
         self.min_time = 0.5
         # ジャンプカット動画の前後の余裕を設定(単位:秒)
         self.margin_time = 0.1
 
+        # 字幕修正チェックボックス
+        self.sub_modi_bln = tk.BooleanVar()
+        self.sub_modi_bln.set(False)
+        self.sub_modi_chk = tk.Checkbutton(self.root, variable=self.sub_modi_bln, text='字幕修正')
+
+
+        self.put_options()
+
         # 実行ボタン
         self.run_button_pos_y = self.option_pos_y + 30
         self.run_button_height = 25
         self.run_button_relwidth = 0.1
-        self.run_button = tk.Button(text='実行', state='disable', command=self.run_button,
-                                        font=button_font,
-                                        highlightbackground=button_background, fg=process_button_fg, highlightthickness=0)
-        self.run_button.place(relx=(1 - self.run_button_relwidth) / 2, y=self.run_button_pos_y,
+        self.run_button = tk.Button(text='実行', state='disable', command=self.run_button, font=button_font,
+                                    highlightbackground=button_background, fg=process_button_fg, highlightthickness=0)
+        self.run_button.place(relx=(1-self.run_button_relwidth)/2, y=self.run_button_pos_y,
                                   relwidth=self.run_button_relwidth, height=self.run_button_height)
 
         # メインループでイベント待ち
@@ -269,9 +278,9 @@ class Videdi:
             idir = os.path.abspath(os.path.dirname(dir))
         self.fld_bln = False
         # ボタン非表示化
-        self.jc_chk_button.configure(state='disable')
-        self.addsub_chk_button.configure(state='disable')
-        self.modi_chk_button.configure(state='disable')
+        self.process_opt.configure(state='disable')
+        self.jc_modi_chk.configure(state='disable')
+        self.sub_modi_chk.configure(state='disable')
         self.run_button.configure(state='disabled')
         self.process_dir = filedialog.askdirectory(initialdir=idir)
         if len(self.process_dir) == 0:
@@ -285,11 +294,10 @@ class Videdi:
             if self.search_videos(self.process_dir) != []:
                 self.current_dir_var.set(dir_name + 'フォルダを選択中')
                 self.fld_bln = True
-                # ジャンプカット動画作成・音声テキスト作成・字幕付き動画作成ボタン表示
-                self.jc_chk_button.configure(state='normal')
-                self.addsub_chk_button.configure(state='normal')
-                self.modi_chk_button.configure(state='normal')
+                # 処理のボタンの有効化
+                self.process_opt.configure(state='normal')
                 self.run_button.configure(state='normal')
+                self.put_options()
             else:
                 self.current_dir_var.set(dir_name + 'フォルダには処理できる動画ファイルがありません。')
         else:
@@ -317,52 +325,65 @@ class Videdi:
             os.mkdir('./' + s)
         return new_dir
 
-    # ボタン非表示化
+    # ボタン無効化
     def hide_all_button(self):
         self.select_dir_button.configure(state='disabled')
         self.log_reset_button.configure(state='disabled')
-        self.jc_chk_button.configure(state='disable')
-        self.addsub_chk_button.configure(state='disable')
-        self.modi_chk_button.configure(state='disable')
+        self.process_opt.configure(state='disable')
+        self.jc_modi_chk.configure(state='disable')
+        self.sub_modi_chk.configure(state='disable')
         self.run_button.configure(state='disable')
         return
 
-    # ボタン再表示
+    # ボタン有効化
     def put_all_button(self):
         self.select_dir_button.configure(state='normal')
         self.log_reset_button.configure(state='normal')
-        self.jc_chk_button.configure(state='normal')
-        self.addsub_chk_button.configure(state='normal')
-        self.modi_chk_button.configure(state='normal')
+        self.process_opt.configure(state='normal')
+        self.jc_modi_chk.configure(state='normal')
+        self.sub_modi_chk.configure(state='normal')
         self.run_button.configure(state='normal')
         return
 
-    # 処理のチェックボタンの状態を確認
-    def check_state(self):
-        # 処理実行ボタンが実行可能か判定
-        if self.fld_bln and (self.jc_bln.get() or self.addsub_bln.get()):
-            self.run_button.configure(state='normal')
+    # 処理の内容からオプションを表示
+    def put_options(self, *args):
+        self.jc_modi_chk.place_forget()
+        self.sub_modi_chk.place_forget()
+        process = self.variable.get()
+        fld_is = 'disable'
+        if self.fld_bln:
+            fld_is = 'normal'
+        self.labelTest.configure(text="The selected item is {}".format(process))
+        if process == 'ジャンプカット':
+            self.jc_modi_chk.place(relx=0.15, y=self.option_pos_y)
+            self.jc_modi_chk.configure(state=fld_is)
+        elif process == '字幕をつける':
+            self.sub_modi_chk.place(relx=0.15, y=self.option_pos_y)
+            self.sub_modi_chk.configure(state=fld_is)
+        elif process == 'ジャンプカットして字幕をつける':
+            self.jc_modi_chk.place(relx=0.15, y=self.option_pos_y)
+            self.jc_modi_chk.configure(state=fld_is)
+            self.sub_modi_chk.place(relx=0.35, y=self.option_pos_y)
+            self.sub_modi_chk.configure(state=fld_is)
         else:
-            self.run_button.configure(state='disable')
-        # 修正のオプションが選択可能か判定
-        if self.addsub_bln.get():
-            self.modi_chk_button.configure(state='normal')
-        else:
-            self.modi_chk_button.configure(state='disable')
+            self.frame.set_log('error:put_options method')
+            return
         return
 
     # 処理実行ボタンの処理
     def run_button(self):
         # ボタン非表示化
         self.hide_all_button()
-        if self.jc_bln.get():
-            if self.addsub_bln.get():
-                thread = threading.Thread(target=self.jc_and_addsub)
-            else:
-                thread = threading.Thread(target=self.jumpcut)
-        else:
+        process = self.variable.get()
+        if process == 'ジャンプカット':
+            thread = threading.Thread(target=self.jumpcut)
+        elif process == '字幕をつける':
             thread = threading.Thread(target=self.addsub)
-        thread.start()
+        elif process == 'ジャンプカットして字幕をつける':
+            thread = threading.Thread(target=self.jc_and_addsub)
+        else:
+            self.frame.set_log('error:run_button method')
+            return
         return
 
     # フォルダ内の動画をジャンプカット
@@ -389,10 +410,8 @@ class Videdi:
             # print(video_sections)
             self.cut_video(video_dir, video_sections, video)
             self.frame.set_log(video + 'のジャンプカット動画作成完了')
-
         # ボタンを再表示
         self.put_all_button()
-
         # ジャンプカット完了ログ
         self.frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画のジャンプカット動画作成完了')
         return
@@ -406,7 +425,7 @@ class Videdi:
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except Exception as e:
             print(e)
-            self.frame.set_log('error001')
+            self.frame.set_log('error:silence_sections method')
             return
 
         s = str(output)
@@ -456,7 +475,7 @@ class Videdi:
                     time_list.append(duration)
         except Exception as e:
             print(e)
-            self.frame.set_log('error002')
+            self.frame.set_log('error:leave_sections method')
             return
 
         new_sections = list(zip(*[iter(time_list)] * 2))
@@ -476,7 +495,7 @@ class Videdi:
             new_sections[-1][1] -= margin_time
         except Exception as e:
             print(e)
-            self.frame.set_log('error003')
+            self.frame.set_log('error:arrange_sections method')
         return new_sections
 
     # 音のある部分を出力
@@ -603,7 +622,7 @@ class Videdi:
             self.frame.set_log(video + 'の字幕付き動画作成完了')
         except Exception as e:
             print(e)
-            self.frame.set_log('error004')
+            self.frame.set_log('error:print_sub method')
         return
 
     # 動画の結合
