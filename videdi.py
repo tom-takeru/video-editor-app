@@ -207,7 +207,7 @@ class Videdi:
         self.run_choices_lab.place(relx=0.05, y=self.run_choices_pos_y)
 
         # 処理のドロップダウンメニュー
-        self.process_list = ['ジャンプカット', '字幕をつける', 'ジャンプカットして字幕をつける']
+        self.process_list = ['ジャンプカット', '字幕を付ける', 'ジャンプカットして字幕を付ける']
         self.variable = tk.StringVar(self.root)
         self.variable.set(self.process_list[0])
         self.variable.trace("w", self.put_options)
@@ -215,12 +215,6 @@ class Videdi:
         self.process_opt.config(width=19)
         self.process_opt.place(relx=0.15, y=self.run_choices_pos_y)
         self.process_opt.config(state='disable')
-
-
-        # 確認用-------------
-        self.labelTest = tk.Label(text="", font=('Helvetica', 12), fg='red')
-        self.labelTest.place(relx=0.5, y=self.run_choices_pos_y)
-        # ------------------
 
         # オプション選択ラベル
         self.option_pos_y = self.run_choices_pos_y + 30
@@ -277,7 +271,7 @@ class Videdi:
         else:
             idir = os.path.abspath(os.path.dirname(dir))
         self.fld_bln = False
-        # ボタン非表示化
+        # ボタン無効化
         self.process_opt.configure(state='disable')
         self.jc_modi_chk.configure(state='disable')
         self.sub_modi_chk.configure(state='disable')
@@ -326,7 +320,7 @@ class Videdi:
         return new_dir
 
     # ボタン無効化
-    def hide_all_button(self):
+    def disable_all_button(self):
         self.select_dir_button.configure(state='disabled')
         self.log_reset_button.configure(state='disabled')
         self.process_opt.configure(state='disable')
@@ -336,7 +330,7 @@ class Videdi:
         return
 
     # ボタン有効化
-    def put_all_button(self):
+    def enable_all_button(self):
         self.select_dir_button.configure(state='normal')
         self.log_reset_button.configure(state='normal')
         self.process_opt.configure(state='normal')
@@ -353,14 +347,13 @@ class Videdi:
         fld_is = 'disable'
         if self.fld_bln:
             fld_is = 'normal'
-        self.labelTest.configure(text="The selected item is {}".format(process))
         if process == 'ジャンプカット':
             self.jc_modi_chk.place(relx=0.15, y=self.option_pos_y)
             self.jc_modi_chk.configure(state=fld_is)
-        elif process == '字幕をつける':
+        elif process == '字幕を付ける':
             self.sub_modi_chk.place(relx=0.15, y=self.option_pos_y)
             self.sub_modi_chk.configure(state=fld_is)
-        elif process == 'ジャンプカットして字幕をつける':
+        elif process == 'ジャンプカットして字幕を付ける':
             self.jc_modi_chk.place(relx=0.15, y=self.option_pos_y)
             self.jc_modi_chk.configure(state=fld_is)
             self.sub_modi_chk.place(relx=0.35, y=self.option_pos_y)
@@ -372,35 +365,36 @@ class Videdi:
 
     # 処理実行ボタンの処理
     def run_button(self):
-        # ボタン非表示化
-        self.hide_all_button()
+        # ボタン無効化
+        self.disable_all_button()
         process = self.variable.get()
         if process == 'ジャンプカット':
             thread = threading.Thread(target=self.jumpcut)
-        elif process == '字幕をつける':
+        elif process == '字幕を付ける':
             thread = threading.Thread(target=self.addsub)
-        elif process == 'ジャンプカットして字幕をつける':
+        elif process == 'ジャンプカットして字幕を付ける':
             thread = threading.Thread(target=self.jc_and_addsub)
         else:
             self.frame.set_log('error:run_button method')
             return
+        thread.start()
         return
 
     # フォルダ内の動画をジャンプカット
     def jumpcut(self):
         # ジャンプカット開始
-        self.frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画のジャンプカット動画作成開始')
+        self.frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画をジャンプカットします')
         os.chdir(self.process_dir)
         video_dir = os.path.abspath(self.process_dir)
         video_list = self.search_videos(self.process_dir)
         for i, video in enumerate(video_list):
-            self.frame.set_log('')
-            self.frame.set_log(video + 'のジャンプカット動画作成開始 ' + str(i+1) + '/' + str(len(video_list)))
+            self.frame.set_log(video + 'をジャンプカットします ' + str(i+1) + '/' + str(len(video_list)))
+            self.frame.set_log(video + 'の無音部分を検知します')
             cut_sections = self.silence_sections(video)
             # print('\ncut_sections')
             # print(cut_sections)
             if len(cut_sections) == 0:
-                self.frame.set_log(video + 'には無音部分がありませんでした。')
+                self.frame.set_log(video + 'には無音部分がありませんでした')
                 continue
             video_sections = self.leave_sections(cut_sections, video)
             # print('\nleave_sections')
@@ -409,20 +403,19 @@ class Videdi:
             # print('\narrange_sections')
             # print(video_sections)
             self.cut_video(video_dir, video_sections, video)
-            self.frame.set_log(video + 'のジャンプカット動画作成完了')
-        # ボタンを再表示
-        self.put_all_button()
+            self.frame.set_log(video + 'をジャンプカットしました')
+        # ボタン有効化
+        self.enable_all_button()
         # ジャンプカット完了ログ
-        self.frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画のジャンプカット動画作成完了')
+        self.frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画をジャンプカットしました')
         return
 
     # 無音部分検出
     def silence_sections(self, video):
         try:
-            self.frame.set_log(video + ' : 無音部分検知中')
-            output = subprocess.run([APP_PATH + '/Contents/MacOS/ffmpeg', '-i', video, '-af',
-                                     'silencedetect=noise=-30dB:d=0.3', '-f', 'null', '-'],
-                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            command = [APP_PATH + '/Contents/MacOS/ffmpeg', '-i', video, '-af',
+                                     'silencedetect=noise=-30dB:d=0.3', '-f', 'null', '-']
+            output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except Exception as e:
             print(e)
             self.frame.set_log('error:silence_sections method')
@@ -442,46 +435,44 @@ class Videdi:
         silence_section_list = list(zip(*[iter(time_list)] * 2))
         return silence_section_list
 
-    # カット部分のsectionsをカットしない部分のsectionsに変換
+    # カット部分のsectionsをカットしない部分のnew_sectionsに変換
     def leave_sections(self, sections, video):
         try:
             duration = 0
-            output = subprocess.run(
-                [APP_PATH + '/Contents/MacOS/ffprobe', video, '-hide_banner', '-show_format'],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            s = str(output)
-            lines = s.split('\\n')
-            for line in lines:
-                words = line.split('=')
-                if words[0] == 'duration':
-                    duration = float(words[1])
-                    break
-            time_list = []
-            if sections[0][0] == 0.0:
-                for i in range(len(sections)-1):
-                    time_list.append(sections[i][1])
-                    time_list.append(sections[i+1][0])
-                if sections[-1][1] < duration:
-                    time_list.append(sections[-1][1])
-                    time_list.append(duration)
-            else:
-                time_list.append(float(0.0))
-                time_list.append(sections[0][0])
-                for i in range(len(sections)-1):
-                    time_list.append(sections[i][1])
-                    time_list.append(sections[i+1][0])
-                if sections[-1][1] < duration:
-                    time_list.append(sections[-1][1])
-                    time_list.append(duration)
+            command = [APP_PATH + '/Contents/MacOS/ffprobe', video, '-hide_banner', '-show_format']
+            output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except Exception as e:
             print(e)
             self.frame.set_log('error:leave_sections method')
             return
-
+        s = str(output)
+        lines = s.split('\\n')
+        for line in lines:
+            words = line.split('=')
+            if words[0] == 'duration':
+                duration = float(words[1])
+                break
+        time_list = []
+        if sections[0][0] == 0.0:
+            for i in range(len(sections)-1):
+                time_list.append(sections[i][1])
+                time_list.append(sections[i+1][0])
+            if sections[-1][1] < duration:
+                time_list.append(sections[-1][1])
+                time_list.append(duration)
+        else:
+            time_list.append(float(0.0))
+            time_list.append(sections[0][0])
+            for i in range(len(sections)-1):
+                time_list.append(sections[i][1])
+                time_list.append(sections[i+1][0])
+            if sections[-1][1] < duration:
+                time_list.append(sections[-1][1])
+                time_list.append(duration)
         new_sections = list(zip(*[iter(time_list)] * 2))
         return new_sections
 
-    # 間隔の短い動画部分を削除
+    # sectionsにoptionで変更を加える
     def arrange_sections(self, sections, min_time, margin_time):
         new_sections = []
         if sections[0][0] < margin_time and (sections[0][1] - sections[0][1]) >= min_time:
@@ -514,6 +505,73 @@ class Videdi:
                 self.frame.set_log(video + '   ' + str(int(((i+1) * 100) / len(sections))) + '%完了')
         return jumpcut_dir
 
+    # 字幕付き動画作成
+    def addsub(self):
+        # 音声テキスト作成開始ログ
+        self.frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画に字幕を付けます')
+        os.chdir(self.process_dir)
+        video_list = self.search_videos(self.process_dir)
+        os.mkdir('.tmp')
+        for i, video in enumerate(video_list):
+            self.frame.set_log(video + 'に字幕を付けます ' + str(i+1) + '/' + str(len(video_list)))
+            shutil.copyfile(video, '.tmp/' + video)
+            self.frame.set_log(video + 'の無音部分を検知します')
+            cut_sections = self.silence_sections(video)
+            video_sections = self.leave_sections(cut_sections, video)
+            video_sections = self.arrange_sections(video_sections, self.min_time, self.margin_time)
+            self.frame.set_log(video + 'の音声認識のために動画を音声部分ごとにカットします')
+            shutil.copyfile(video, '.tmp/' + video)
+            jumpcut_dir = self.cut_video(self.process_dir + '/.tmp', video_sections, video)
+            jumpcut_video_list = self.search_videos(jumpcut_dir)
+            self.speech_recognize(jumpcut_dir, jumpcut_video_list)
+            text_path = os.path.abspath('./.tmp/' + jumpcut_dir.split('/')[-1] + '/' + jumpcut_dir.split('/')[-1] + '_sub')
+            text_list = sorted(os.listdir(text_path))
+            self.make_srt(self.process_dir, video, text_path, text_list, video_sections)
+            self.print_sub(self.process_dir, video, self.process_dir)
+            self.frame.set_log(video + 'に字幕を付けました。')
+        shutil.rmtree('.tmp')
+        # ボタン有効化
+        self.enable_all_button()
+        # 音声テキスト作成完了ログ
+        self.frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画に字幕を付けました')
+        return
+
+    # ジャンプカットした動画を音声認識して結合
+    def jc_and_addsub(self):
+        # 音声テキスト作成開始ログ
+        self.frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画をジャンプカットして字幕を付けます')
+        os.chdir(self.process_dir)
+        video_list = self.search_videos(self.process_dir)
+        if os.path.exists('.tmp'):
+            shutil.rmtree('.tmp')
+        os.mkdir('.tmp')
+        for i, video in enumerate(video_list):
+            self.frame.set_log(video + 'をジャンプカットして字幕を付けます ' + str(i+1) + '/' + str(len(video_list)))
+            shutil.copyfile(video, '.tmp/' + video)
+            self.frame.set_log(video + 'の無音部分を検知します')
+            cut_sections = self.silence_sections(video)
+            video_sections = self.leave_sections(cut_sections, video)
+            video_sections = self.arrange_sections(video_sections, self.min_time, self.margin_time)
+            self.frame.set_log(video + 'の音声認識のために動画をカットします')
+            shutil.copyfile(video, '.tmp/' + video)
+            jumpcut_dir = os.path.abspath(self.cut_video(self.process_dir + '/.tmp', video_sections, video))
+            jumpcut_video_list = self.search_videos(jumpcut_dir)
+            self.speech_recognize(jumpcut_dir, jumpcut_video_list)
+            text_path = os.path.abspath('./.tmp/' + jumpcut_dir.split('/')[-1] + '/' + jumpcut_dir.split('/')[-1] + '_sub')
+            for i, jc_video in enumerate(jumpcut_video_list):
+                text_list = [jc_video[0:-4] + '.txt', ]
+                self.make_srt(jumpcut_dir, jc_video, text_path, text_list, [[0.0, video_sections[i][1] - video_sections[i][0]], ])
+                self.print_sub(jumpcut_dir, jc_video, jumpcut_dir)
+                self.frame.set_log(jc_video + 'に字幕を付けました')
+                os.remove(jumpcut_dir + '/' + jc_video)
+            self.combine_video(jumpcut_dir, video[0:-4])
+        shutil.rmtree('.tmp')
+        # ボタン有効化
+        self.enable_all_button()
+        # 音声テキスト作成完了ログ
+        self.frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画をジャンプカットして字幕を付けました')
+        return
+
     # # 音声テキスト作成
     # def speech_to_text(self):
     #     # 音声テキスト作成開始ログ
@@ -521,8 +579,8 @@ class Videdi:
     #     video_list = self.search_videos(self.process_dir)
     #     # 音声認識処理
     #     self.speech_recognize(self.process_dir, video_list)
-    #     # ボタンを再表示
-    #     self.put_all_button()
+    #     # ボタン有効化
+    #     self.enable_all_button()
     #     # 音声テキスト作成完了ログ
     #     self.frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画の音声テキスト作成完了')
     #     return
@@ -555,35 +613,6 @@ class Videdi:
                 self.frame.set_log(video + 'から音声は検出できませんでした ' + str(int((i+1)*100/len(video_list))) + '%完了')
         os.rmdir('.tmp')
         os.chdir(self.process_dir)
-        return
-
-    # 字幕付き動画作成
-    def addsub(self):
-        # 音声テキスト作成開始ログ
-        self.frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画の字幕付き動画作成開始')
-        os.chdir(self.process_dir)
-        video_list = self.search_videos(self.process_dir)
-        os.mkdir('.tmp')
-        for i, video in enumerate(video_list):
-            self.frame.set_log(video + 'の字幕付き動画作成開始 ' + str(i+1) + '/' + str(len(video_list)))
-            shutil.copyfile(video, '.tmp/' + video)
-            cut_sections = self.silence_sections(video)
-            video_sections = self.leave_sections(cut_sections, video)
-            video_sections = self.arrange_sections(video_sections, self.min_time, self.margin_time)
-            self.frame.set_log(video + 'の音声認識のために動画をカット')
-            shutil.copyfile(video, '.tmp/' + video)
-            jumpcut_dir = self.cut_video(self.process_dir + '/.tmp', video_sections, video)
-            jumpcut_video_list = self.search_videos(jumpcut_dir)
-            self.speech_recognize(jumpcut_dir, jumpcut_video_list)
-            text_path = os.path.abspath('./.tmp/' + jumpcut_dir.split('/')[-1] + '/' + jumpcut_dir.split('/')[-1] + '_sub')
-            text_list = sorted(os.listdir(text_path))
-            self.make_srt(self.process_dir, video, text_path, text_list, video_sections)
-            self.print_sub(self.process_dir, video, self.process_dir)
-        shutil.rmtree('.tmp')
-        # ボタンを再表示
-        self.put_all_button()
-        # 音声テキスト作成完了ログ
-        self.frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画の字幕付き動画作成完了')
         return
 
     # srtファイル作成
@@ -619,56 +648,25 @@ class Videdi:
                        '-vf', 'subtitles=' + srt_path + '/' + video[0:-4] + '_sub.srt:force_style=\'FontSize=10\'',
                        video_dir + '/' + video[0:-4] + '_sub.mp4']
             subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            self.frame.set_log(video + 'の字幕付き動画作成完了')
         except Exception as e:
             print(e)
             self.frame.set_log('error:print_sub method')
+            return
         return
 
     # 動画の結合
     def combine_video(self, video_dir, output_name):
         video_list = self.search_videos(video_dir)
-        with open(video_dir + '/combine.txt', mode='w', encoding='utf8') as wf:
-            for i, video in enumerate(video_list):
-                wf.write('file ' + video_dir + '/' + video + '\n')
-        command = [APP_PATH + '/Contents/MacOS/ffmpeg', '-f', 'concat', '-safe', '0', '-i', video_dir + '/combine.txt',
-                   '-c', 'copy', output_name + '_jc_sub.mp4']
-        subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return
-
-    # ジャンプカットした動画を音声認識して結合
-    def jc_and_addsub(self):
-        # 音声テキスト作成開始ログ
-        self.frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画のジャンプカットした字幕付き動画作成開始')
-        os.chdir(self.process_dir)
-        video_list = self.search_videos(self.process_dir)
-        if os.path.exists('.tmp'):
-            shutil.rmtree('.tmp')
-        os.mkdir('.tmp')
-        for i, video in enumerate(video_list):
-            self.frame.set_log(video + 'の字幕付き動画作成開始 ' + str(i+1) + '/' + str(len(video_list)))
-            shutil.copyfile(video, '.tmp/' + video)
-            cut_sections = self.silence_sections(video)
-            video_sections = self.leave_sections(cut_sections, video)
-            video_sections = self.arrange_sections(video_sections, self.min_time, self.margin_time)
-            self.frame.set_log(video + 'の音声認識のために動画をカット')
-            shutil.copyfile(video, '.tmp/' + video)
-            jumpcut_dir = os.path.abspath(self.cut_video(self.process_dir + '/.tmp', video_sections, video))
-            jumpcut_video_list = self.search_videos(jumpcut_dir)
-            self.speech_recognize(jumpcut_dir, jumpcut_video_list)
-            text_path = os.path.abspath('./.tmp/' + jumpcut_dir.split('/')[-1] + '/' + jumpcut_dir.split('/')[-1] + '_sub')
-            for i, jc_video in enumerate(jumpcut_video_list):
-                text_list = [jc_video[0:-4] + '.txt', ]
-                self.make_srt(jumpcut_dir, jc_video, text_path, text_list, [[0.0, video_sections[i][1] - video_sections[i][0]], ])
-                self.print_sub(jumpcut_dir, jc_video, jumpcut_dir)
-                os.remove(jumpcut_dir + '/' + jc_video)
-            self.combine_video(jumpcut_dir, video[0:-4])
-        shutil.rmtree('.tmp')
-        # ボタンを再表示
-        self.put_all_button()
-        # 音声テキスト作成完了ログ
-        self.frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画のジャンプカットした字幕付き動画作成完了')
-        self.put_all_button()
+        try:
+            with open(video_dir + '/combine.txt', mode='w', encoding='utf8') as wf:
+                for i, video in enumerate(video_list):
+                    wf.write('file ' + video_dir + '/' + video + '\n')
+            command = [APP_PATH + '/Contents/MacOS/ffmpeg', '-f', 'concat', '-safe', '0', '-i', video_dir + '/combine.txt',
+                       '-c', 'copy', output_name + '_jc_sub.mp4']
+            subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except Exception as e:
+            print(e)
+            self.frame.set_log('error:combine_video method')
         return
 
 def main():
