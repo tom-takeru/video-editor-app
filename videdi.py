@@ -222,19 +222,19 @@ class Videdi:
         self.option_lab.place(relx=0.05, y=self.option_pos_y)
 
         # ジャンプカット修正チェックボックス
-        self.jc_modi_bln = tk.BooleanVar()
-        self.jc_modi_bln.set(False)
-        self.jc_modi_chk = tk.Checkbutton(self.root, variable=self.jc_modi_bln, text='ジャンプカット修正')
+        self.jc_fix_bln = tk.BooleanVar()
+        self.jc_fix_bln.set(False)
+        self.jc_fix_chk = tk.Checkbutton(self.root, variable=self.jc_fix_bln, text='ジャンプカット修正')
+
         # ジャンプカット動画の最小時間を設定(単位:秒)
         self.min_time = 0.5
         # ジャンプカット動画の前後の余裕を設定(単位:秒)
         self.margin_time = 0.1
 
         # 字幕修正チェックボックス
-        self.sub_modi_bln = tk.BooleanVar()
-        self.sub_modi_bln.set(False)
-        self.sub_modi_chk = tk.Checkbutton(self.root, variable=self.sub_modi_bln, text='字幕修正')
-
+        self.sub_fix_bln = tk.BooleanVar()
+        self.sub_fix_bln.set(False)
+        self.sub_fix_chk = tk.Checkbutton(self.root, variable=self.sub_fix_bln, text='字幕修正')
 
         self.put_options()
 
@@ -273,8 +273,8 @@ class Videdi:
         self.fld_bln = False
         # ボタン無効化
         self.process_opt.configure(state='disable')
-        self.jc_modi_chk.configure(state='disable')
-        self.sub_modi_chk.configure(state='disable')
+        self.jc_fix_chk.configure(state='disable')
+        self.sub_fix_chk.configure(state='disable')
         self.run_button.configure(state='disabled')
         self.process_dir = filedialog.askdirectory(initialdir=idir)
         if len(self.process_dir) == 0:
@@ -324,8 +324,8 @@ class Videdi:
         self.select_dir_button.configure(state='disabled')
         self.log_reset_button.configure(state='disabled')
         self.process_opt.configure(state='disable')
-        self.jc_modi_chk.configure(state='disable')
-        self.sub_modi_chk.configure(state='disable')
+        self.jc_fix_chk.configure(state='disable')
+        self.sub_fix_chk.configure(state='disable')
         self.run_button.configure(state='disable')
         return
 
@@ -334,30 +334,30 @@ class Videdi:
         self.select_dir_button.configure(state='normal')
         self.log_reset_button.configure(state='normal')
         self.process_opt.configure(state='normal')
-        self.jc_modi_chk.configure(state='normal')
-        self.sub_modi_chk.configure(state='normal')
+        self.jc_fix_chk.configure(state='normal')
+        self.sub_fix_chk.configure(state='normal')
         self.run_button.configure(state='normal')
         return
 
     # 処理の内容からオプションを表示
     def put_options(self, *args):
-        self.jc_modi_chk.place_forget()
-        self.sub_modi_chk.place_forget()
+        self.jc_fix_chk.place_forget()
+        self.sub_fix_chk.place_forget()
         process = self.variable.get()
         fld_is = 'disable'
         if self.fld_bln:
             fld_is = 'normal'
         if process == 'ジャンプカット':
-            self.jc_modi_chk.place(relx=0.15, y=self.option_pos_y)
-            self.jc_modi_chk.configure(state=fld_is)
+            self.jc_fix_chk.place(relx=0.15, y=self.option_pos_y)
+            self.jc_fix_chk.configure(state=fld_is)
         elif process == '字幕を付ける':
-            self.sub_modi_chk.place(relx=0.15, y=self.option_pos_y)
-            self.sub_modi_chk.configure(state=fld_is)
+            self.sub_fix_chk.place(relx=0.15, y=self.option_pos_y)
+            self.sub_fix_chk.configure(state=fld_is)
         elif process == 'ジャンプカットして字幕を付ける':
-            self.jc_modi_chk.place(relx=0.15, y=self.option_pos_y)
-            self.jc_modi_chk.configure(state=fld_is)
-            self.sub_modi_chk.place(relx=0.35, y=self.option_pos_y)
-            self.sub_modi_chk.configure(state=fld_is)
+            self.jc_fix_chk.place(relx=0.15, y=self.option_pos_y)
+            self.jc_fix_chk.configure(state=fld_is)
+            self.sub_fix_chk.place(relx=0.35, y=self.option_pos_y)
+            self.sub_fix_chk.configure(state=fld_is)
         else:
             self.frame.set_log('error:put_options method')
             return
@@ -391,17 +391,22 @@ class Videdi:
             self.frame.set_log(video + 'をジャンプカットします ' + str(i+1) + '/' + str(len(video_list)))
             self.frame.set_log(video + 'の無音部分を検知します')
             cut_sections = self.silence_sections(video)
-            # print('\ncut_sections')
-            # print(cut_sections)
+            print('\ncut_sections')
+            print(cut_sections)
             if len(cut_sections) == 0:
                 self.frame.set_log(video + 'には無音部分がありませんでした')
                 continue
-            video_sections = self.leave_sections(cut_sections, video)
-            # print('\nleave_sections')
-            # print(video_sections)
-            video_sections = self.arrange_sections(video_sections, self.min_time, self.margin_time)
-            # print('\narrange_sections')
-            # print(video_sections)
+            if self.jc_fix_bln.get():
+                video_sections = self.jc_fix_video_sections(cut_sections, video)
+                print('\nvideo_sections')
+                print(video_sections)
+            else:
+                video_sections = self.video_sections(cut_sections, video)
+                print('\nvideo_sections')
+                print(video_sections)
+                video_sections = self.arrange_sections(video_sections, self.min_time, self.margin_time)
+                print('\narrange_sections')
+                print(video_sections)
             self.cut_video(video_dir, video_sections, video)
             self.frame.set_log(video + 'をジャンプカットしました')
         # ボタン有効化
@@ -435,15 +440,15 @@ class Videdi:
         silence_section_list = list(zip(*[iter(time_list)] * 2))
         return silence_section_list
 
-    # カット部分のsectionsをカットしない部分のnew_sectionsに変換
-    def leave_sections(self, sections, video):
+    # 動画の長さを取得
+    def get_video_duration(self, video):
+        duration = 0
         try:
-            duration = 0
             command = [APP_PATH + '/Contents/MacOS/ffprobe', video, '-hide_banner', '-show_format']
             output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except Exception as e:
             print(e)
-            self.frame.set_log('error:leave_sections method')
+            self.frame.set_log('error:video_sections method')
             return
         s = str(output)
         lines = s.split('\\n')
@@ -452,30 +457,44 @@ class Videdi:
             if words[0] == 'duration':
                 duration = float(words[1])
                 break
+        return duration
+
+    # カットする部分sectionsをカットしない部分new_sectionsに変換
+    def video_sections(self, sections, video):
         time_list = []
-        if sections[0][0] == 0.0:
-            for i in range(len(sections)-1):
-                time_list.append(sections[i][1])
-                time_list.append(sections[i+1][0])
-            if sections[-1][1] < duration:
-                time_list.append(sections[-1][1])
-                time_list.append(duration)
-        else:
+        # if sections[0][0] == 0.0:
+        #     for i in range(len(sections)-1):
+        #         time_list.append(sections[i][1])
+        #         time_list.append(sections[i+1][0])
+        #     if sections[-1][1] < duration:
+        #         time_list.append(sections[-1][1])
+        #         time_list.append(duration)
+        # else:
+        #     time_list.append(float(0.0))
+        #     time_list.append(sections[0][0])
+        #     for i in range(len(sections)-1):
+        #         time_list.append(sections[i][1])
+        #         time_list.append(sections[i+1][0])
+        #     if sections[-1][1] < duration:
+        #         time_list.append(sections[-1][1])
+        #         time_list.append(duration)
+        if sections[0][0] != 0.0:
             time_list.append(float(0.0))
             time_list.append(sections[0][0])
-            for i in range(len(sections)-1):
-                time_list.append(sections[i][1])
-                time_list.append(sections[i+1][0])
-            if sections[-1][1] < duration:
-                time_list.append(sections[-1][1])
-                time_list.append(duration)
+        for i in range(len(sections)-1):
+            time_list.append(sections[i][1])
+            time_list.append(sections[i+1][0])
+        duration = self.get_video_duration(video)
+        if sections[-1][1] < duration:
+            time_list.append(sections[-1][1])
+            time_list.append(duration)
         new_sections = list(zip(*[iter(time_list)] * 2))
         return new_sections
 
-    # sectionsにoptionで変更を加える
+    # sectionsにオプションで変更を加える
     def arrange_sections(self, sections, min_time, margin_time):
         new_sections = []
-        if sections[0][0] < margin_time and (sections[0][1] - sections[0][1]) >= min_time:
+        if sections[0][0] < margin_time and (sections[0][1] - sections[0][0]) >= min_time:
             sections[0][0] += margin_time
         for i in range(len(sections)):
             if (sections[i][1] - sections[i][0]) < min_time:
@@ -489,6 +508,26 @@ class Videdi:
             self.frame.set_log('error:arrange_sections method')
         return new_sections
 
+    # ジャンプカットの修正をする場合のカットしない部分new_sectionsを作成
+    def jc_fix_video_sections(self, sections, video):
+        time_list = []
+        if sections[0][0] != 0.0:
+            time_list.append(float(0.0))
+            time_list.append(sections[0][0])
+        for i in range(len(sections)-1):
+            time_list.append(sections[i][0])
+            time_list.append(sections[i][1])
+            time_list.append(sections[i][1])
+            time_list.append(sections[i+1][0])
+        time_list.append(sections[-1][0])
+        time_list.append(sections[-1][1])
+        duration = self.get_video_duration(video)
+        if sections[-1][1] < duration:
+            time_list.append(sections[-1][1])
+            time_list.append(duration)
+        new_sections = list(zip(*[iter(time_list)] * 2))
+        return new_sections
+
     # 音のある部分を出力
     def cut_video(self, video_dir, sections, video):
         os.chdir(video_dir)
@@ -497,9 +536,11 @@ class Videdi:
         jumpcut_dir = self.make_dir(video_name + '_jumpcut')
         for i in range(len(sections)):
             split_file = jumpcut_dir + '/' + video_name + '_' + format(i+1, '0>' + str(digit)) + '.mp4'
-            subprocess.run(
-                [APP_PATH + '/Contents/MacOS/ffmpeg', '-i', video, '-ss', str(sections[i][0]), '-t',
-                 str(sections[i][1] - sections[i][0]), split_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            command = [APP_PATH + '/Contents/MacOS/ffmpeg', '-i', video, '-ss', str(sections[i][0]), '-t',
+                       str(sections[i][1] - sections[i][0]), split_file]
+            subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if self.jc_fix_bln.get():
+                pass
             # logを表示
             if int((i+1)*100/len(sections)) != int(i*100/len(sections)):
                 self.frame.set_log(video + '   ' + str(int(((i+1) * 100) / len(sections))) + '%完了')
@@ -517,7 +558,7 @@ class Videdi:
             shutil.copyfile(video, '.tmp/' + video)
             self.frame.set_log(video + 'の無音部分を検知します')
             cut_sections = self.silence_sections(video)
-            video_sections = self.leave_sections(cut_sections, video)
+            video_sections = self.video_sections(cut_sections, video)
             video_sections = self.arrange_sections(video_sections, self.min_time, self.margin_time)
             self.frame.set_log(video + 'の音声認識のために動画を音声部分ごとにカットします')
             shutil.copyfile(video, '.tmp/' + video)
@@ -550,7 +591,7 @@ class Videdi:
             shutil.copyfile(video, '.tmp/' + video)
             self.frame.set_log(video + 'の無音部分を検知します')
             cut_sections = self.silence_sections(video)
-            video_sections = self.leave_sections(cut_sections, video)
+            video_sections = self.video_sections(cut_sections, video)
             video_sections = self.arrange_sections(video_sections, self.min_time, self.margin_time)
             self.frame.set_log(video + 'の音声認識のために動画をカットします')
             shutil.copyfile(video, '.tmp/' + video)
