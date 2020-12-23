@@ -75,3 +75,141 @@ def silence_sections(video):
     # 無音部分の二次元配列に変換する
     silence_section_list = list(zip(*[iter(time_list)] * 2))
     return silence_section_list
+
+
+# 動画の長さを取得
+def get_video_duration(video):
+    duration = 0
+    try:
+        command = [FFPROBE_PATH, video, '-hide_banner', '-show_format']
+        output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except Exception as e:
+        print('error:video_sections method')
+        print(e)
+        return
+    s = str(output)
+    lines = s.split('\\n')
+    for line in lines:
+        words = line.split('=')
+        if words[0] == 'duration':
+            duration = float(words[1])
+            break
+    return duration
+
+
+# カットする部分sectionsをカットしない部分new_sectionsに変換
+def video_sections(sections, video):
+    time_list = []
+    if sections[0][0] != 0.0:
+        time_list.append(float(0.0))
+        time_list.append(sections[0][0])
+    for i in range(len(sections)-1):
+        time_list.append(sections[i][1])
+        time_list.append(sections[i+1][0])
+    duration = get_video_duration(video)
+    if sections[-1][1] < duration:
+        time_list.append(sections[-1][1])
+        time_list.append(duration)
+    new_sections = list(zip(*[iter(time_list)] * 2))
+    return new_sections
+
+
+# sectionsにオプションで変更を加える
+def arrange_sections(sections, min_time, margin_time):
+    new_sections = []
+    for i in range(len(sections)):
+        if (sections[i][1] - sections[i][0]) < min_time:
+            continue
+        else:
+            if i == 0 and sections[0][0] < margin_time:
+                new_sections.append([sections[i][0], sections[i][1] + margin_time])
+            else:
+                new_sections.append([sections[i][0] - margin_time, sections[i][1] + margin_time])
+    try:
+        new_sections[-1][1] -= margin_time
+    except Exception as e:
+        print('error:arrange_sections method')
+        print(e)
+    return new_sections
+
+
+# ジャンプカットの修正をする場合のカットしない部分new_sectionsを作成
+def all_sections(sections, video):
+    time_list = []
+    if sections[0][0] != 0.0:
+        time_list.append(float(0.0))
+        time_list.append(sections[0][0])
+    for i in range(len(sections)-1):
+        time_list.append(sections[i][0])
+        time_list.append(sections[i][1])
+        time_list.append(sections[i][1])
+        time_list.append(sections[i+1][0])
+    time_list.append(sections[-1][0])
+    time_list.append(sections[-1][1])
+    duration = get_video_duration(video)
+    if sections[-1][1] < duration:
+        time_list.append(sections[-1][1])
+        time_list.append(duration)
+    new_sections = list(zip(*[iter(time_list)] * 2))
+    return new_sections
+
+
+# srtファイル作成
+def make_srt(video_dir, video, text_path, text_list, subtitle_sections):
+    def time_for_srt(time):
+        result = []
+        hours = int(time / 3600)
+        result += str(hours).zfill(2) + ':'
+        time -= hours * 3600
+        minutes = int(time / 60)
+        result += str(minutes).zfill(2) + ':'
+        time -= minutes * 60
+        seconds = int(time)
+        result += str(seconds).zfill(2) + ','
+        time -= seconds
+        microseconds = round(time * 1000)
+        result += str(microseconds).zfill(3)
+        return ''.join(result)
+    with open(video_dir + '/' + video.split('.')[0] + '_subtitle.srt', mode='w', encoding='utf8') as wf:
+        for i, text in enumerate(text_list):
+            wf.write(str(i + 1) + '\n')
+            sec_num = i
+            time_info = time_for_srt(
+                subtitle_sections[sec_num][0]) + ' --> ' + time_for_srt(subtitle_sections[sec_num][1])
+            wf.write(time_info + '\n')
+            with open(text_path + '/' + text, mode='r', encoding='utf8') as rf:
+                wf.write(rf.read() + '\n\n')
+    return
+
+
+# 動画の字幕焼き付け
+def print_subtitle(video_dir, video, srt_path):
+    try:
+        new_file_path = check_path(video_dir + '/' + video.split('.')[0] + '_subtitle.mp4')
+        command = [FFMPEG_PATH, '-i', video_dir + '/' + video, '-vf',
+                   'subtitles=' + srt_path + '/' + video.split('.')[0] + r"_subtitle.srt:force_style='FontSize=10'",
+                   new_file_path]
+        subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except Exception as e:
+        print('error:print_subtitle method')
+        print(e)
+        return
+    return video_dir + '/' + video.split('.')[0] + '_subtitle.mp4'
+
+
+# 動画の結合
+def combine_video(video_dir, output_name):
+    video_list = search_videos(video_dir)
+    try:
+        with open(video_dir + '/combine.txt', mode='w', encoding='utf8') as wf:
+            for i, video in enumerate(video_list):
+                wf.write('file ' + video_dir + '/' + video + '\n')
+        output_name = check_path(output_name)
+        command = [FFMPEG_PATH, '-f', 'concat', '-safe', '0', '-i', video_dir + '/combine.txt',
+                   '-c', 'copy', output_name]
+        subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        os.remove(video_dir + '/combine.txt')
+    except Exception as e:
+        print('error:combine_video method')
+        print(e)
+    return
