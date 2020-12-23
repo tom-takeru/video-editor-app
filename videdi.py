@@ -20,9 +20,11 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 APP_PATH = '/'.join(sys.argv[0].split('/')[:-3])
 # python videdi.pyで実行する場合
 if APP_PATH == '':
-    APP_PATH = '/Applications/videdi.app'
-FFMPEG_PATH = APP_PATH + '/Contents/MacOS/ffmpeg'
-FFPROBE_PATH = APP_PATH + '/Contents/MacOS/ffprobe'
+    FFMPEG_PATH = APP_PATH + '/usr/local/bin/ffmpeg'
+    FFPROBE_PATH = APP_PATH + '/usr/local/bin/ffprobe'
+else:
+    FFMPEG_PATH = APP_PATH + '/Contents/MacOS/ffmpeg'
+    FFPROBE_PATH = APP_PATH + '/Contents/MacOS/ffprobe'
 
 
 class Videdi:
@@ -278,134 +280,22 @@ class Videdi:
         for i, video in enumerate(video_list):
             self.log_frame.set_log(video + 'をジャンプカットします ' + str(i+1) + '/' + str(len(video_list)))
             self.log_frame.set_log(video + 'の無音部分を検知します')
-            cut_sections = self.silence_sections(video)
+            cut_sections = videdi_util.silence_sections(video)
             if len(cut_sections) == 0:
                 self.log_frame.set_log(video + 'には無音部分がありませんでした')
                 continue
-            video_sections = self.video_sections(cut_sections, video)
-            video_sections = self.arrange_sections(video_sections, self.min_time, self.margin_time)
+            video_sections = videdi_util.video_sections(cut_sections, video)
+            video_sections = videdi_util.arrange_sections(video_sections, self.min_time, self.margin_time)
             if self.jumpcut_fix_bln.get():
-                video_sections = self.all_sections(video_sections, video)
+                video_sections = videdi_util.all_sections(video_sections, video)
             jumpcut_dir, _ = self.cut_video(video_dir_path, video_sections, video)
-            self.combine_video(jumpcut_dir, os.path.splitext(video)[0] + '_jumpcut.mp4')
+            videdi_util.combine_video(jumpcut_dir, os.path.splitext(video)[0] + '_jumpcut.mp4')
             self.log_frame.set_log(video + 'をジャンプカットしました')
             self.jumpcut_fix_bln.set(jumpcut_fix_bln)
         # ボタン有効化
         self.enable_all_button()
         # ジャンプカット完了ログ
         self.log_frame.set_big_log(self.process_dir_path.split('/')[-1] + 'フォルダ内の動画をジャンプカットしました')
-
-# -----------------------ファイル分割できそう(ここから)-----------------------------
-    # 無音部分検出
-    def silence_sections(self, video):
-        try:
-            # 無音部分をffmpegで検出
-            command = [FFMPEG_PATH, '-i', video, '-af', 'silencedetect=noise=-30dB:d=0.3', '-f', 'null', '-']
-            output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        except Exception as e:
-            print('error:silence_sections method')
-            print(e)
-            return
-        # 出力結果から無音部分の始まりと終わりの時間を1セットとする、二次元配列を作る
-        s = str(output)
-        # 出力結果を改行ごとに分ける
-        lines = s.split('\\n')
-        # 時間を入れていく1次元配列を作成
-        time_list = []
-        # 出力結果の各行から無音部分についての情報を探す
-        for line in lines:
-            # 無音部分についての出力行の場合
-            if 'silencedetect' in line:
-                # その行をスペースで区切る
-                words = line.split(' ')
-                # 行の中から無音部分の始まりと終わりを探す
-                for i in range(len(words)):
-                    # 無音部分の始まりの場合
-                    if 'silence_start' in words[i]:
-                        # その時間を配列にfloatに変換して追加する
-                        time_list.append(float(words[i + 1]))
-                    # 無音部分の終わりの場合
-                    if 'silence_end' in words[i]:
-                        # その時間を配列にfloatに変換して追加する
-                        time_list.append(float(words[i + 1]))
-        # 無音部分の二次元配列に変換する
-        silence_section_list = list(zip(*[iter(time_list)] * 2))
-        return silence_section_list
-
-    # 動画の長さを取得
-    def get_video_duration(self, video):
-        duration = 0
-        try:
-            command = [FFPROBE_PATH, video, '-hide_banner', '-show_format']
-            output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        except Exception as e:
-            print('error:video_sections method')
-            print(e)
-            return
-        s = str(output)
-        lines = s.split('\\n')
-        for line in lines:
-            words = line.split('=')
-            if words[0] == 'duration':
-                duration = float(words[1])
-                break
-        return duration
-
-    # カットする部分sectionsをカットしない部分new_sectionsに変換
-    def video_sections(self, sections, video):
-        time_list = []
-        if sections[0][0] != 0.0:
-            time_list.append(float(0.0))
-            time_list.append(sections[0][0])
-        for i in range(len(sections)-1):
-            time_list.append(sections[i][1])
-            time_list.append(sections[i+1][0])
-        duration = self.get_video_duration(video)
-        if sections[-1][1] < duration:
-            time_list.append(sections[-1][1])
-            time_list.append(duration)
-        new_sections = list(zip(*[iter(time_list)] * 2))
-        return new_sections
-
-    # sectionsにオプションで変更を加える
-    def arrange_sections(self, sections, min_time, margin_time):
-        new_sections = []
-        for i in range(len(sections)):
-            if (sections[i][1] - sections[i][0]) < min_time:
-                continue
-            else:
-                if i == 0 and sections[0][0] < margin_time:
-                    new_sections.append([sections[i][0], sections[i][1] + margin_time])
-                else:
-                    new_sections.append([sections[i][0] - margin_time, sections[i][1] + margin_time])
-        try:
-            new_sections[-1][1] -= margin_time
-        except Exception as e:
-            print('error:arrange_sections method')
-            print(e)
-        return new_sections
-
-    # ジャンプカットの修正をする場合のカットしない部分new_sectionsを作成
-    def all_sections(self, sections, video):
-        time_list = []
-        if sections[0][0] != 0.0:
-            time_list.append(float(0.0))
-            time_list.append(sections[0][0])
-        for i in range(len(sections)-1):
-            time_list.append(sections[i][0])
-            time_list.append(sections[i][1])
-            time_list.append(sections[i][1])
-            time_list.append(sections[i+1][0])
-        time_list.append(sections[-1][0])
-        time_list.append(sections[-1][1])
-        duration = self.get_video_duration(video)
-        if sections[-1][1] < duration:
-            time_list.append(sections[-1][1])
-            time_list.append(duration)
-        new_sections = list(zip(*[iter(time_list)] * 2))
-        return new_sections
-
-# ------------------------------ファイル分割できそう(ここまで)----------------------------
 
     # 音のある部分を出力
     def cut_video(self, video_dir, sections, video):
@@ -532,10 +422,10 @@ class Videdi:
             self.log_frame.set_log(video + 'をカットして字幕を付けます ' + str(i+1) + '/' + str(len(video_list)))
             shutil.copyfile(video, '.tmp/' + video)
             self.log_frame.set_log(video + 'の無音部分を検知します')
-            cut_sections = self.silence_sections(video)
-            video_sections = self.video_sections(cut_sections, video)
-            video_sections = self.arrange_sections(video_sections, self.min_time, self.margin_time)
-            video_sections = self.all_sections(video_sections, video)
+            cut_sections = videdi_util.silence_sections(video)
+            video_sections = videdi_util.video_sections(cut_sections, video)
+            video_sections = videdi_util.arrange_sections(video_sections, self.min_time, self.margin_time)
+            video_sections = videdi_util.all_sections(video_sections, video)
             self.log_frame.set_log(video + 'の音声認識のために動画をカットします')
             shutil.copyfile(video, '.tmp/' + video)
             jumpcut_dir, video_sections = self.cut_video(self.process_dir_path + '/.tmp', video_sections, video)
@@ -546,15 +436,15 @@ class Videdi:
                                         jumpcut_dir.split('/')[-1] + '_subtitle')
             for j, jumpcut_video in enumerate(jumpcut_video_list):
                 text_list = [jumpcut_video.split('.')[0] + '.txt', ]
-                self.make_srt(jumpcut_dir, jumpcut_video, text_path, text_list,
-                              [[0.0, video_sections[j][1] - video_sections[j][0]], ])
+                videdi_util.make_srt(jumpcut_dir, jumpcut_video, text_path, text_list,
+                                     [[0.0, video_sections[j][1] - video_sections[j][0]], ])
                 if self.subtitle_fix_bln.get():
                     self.decided = False
                     while not self.decided:
                         self.thread_event = threading.Event()
-                        self.make_srt(jumpcut_dir, jumpcut_video, text_path, text_list,
-                                      [[0.0, video_sections[j][1] - video_sections[j][0]], ])
-                        jumpcut_video_subtitle = self.print_subtitle(jumpcut_dir, jumpcut_video, jumpcut_dir)
+                        videdi_util.make_srt(jumpcut_dir, jumpcut_video, text_path, text_list,
+                                             [[0.0, video_sections[j][1] - video_sections[j][0]], ])
+                        jumpcut_video_subtitle = videdi_util.print_subtitle(jumpcut_dir, jumpcut_video, jumpcut_dir)
                         thread = threading.Thread(target=self.play_video_for_subtitle,
                                                   args=[jumpcut_video_subtitle,
                                                         text_path + '/' + jumpcut_video.split('.')[0] + '.txt'])
@@ -562,12 +452,12 @@ class Videdi:
                         self.thread_event.wait()
                         thread.join()
                 else:
-                    self.print_subtitle(jumpcut_dir, jumpcut_video, jumpcut_dir)
+                    videdi_util.print_subtitle(jumpcut_dir, jumpcut_video, jumpcut_dir)
                 s = str(int((j+1)*100/len(jumpcut_video_list)))
                 self.log_frame.set_log('字幕付け' + '{:>3}'.format(s) + '%完了')
                 os.remove(jumpcut_dir + '/' + jumpcut_video)
             # 動画を結合
-            self.combine_video(jumpcut_dir, os.path.splitext(video)[0] + '_subtitle.mp4')
+            videdi_util.combine_video(jumpcut_dir, os.path.splitext(video)[0] + '_subtitle.mp4')
             self.subtitle_fix_bln.set(subtitle_fix_bln)
             self.log_frame.set_log(video + 'に字幕を付けました')
         shutil.rmtree('.tmp')
@@ -594,14 +484,14 @@ class Videdi:
             self.log_frame.set_log(video + 'をカットして字幕を付けます ' + str(i+1) + '/' + str(len(video_list)))
             shutil.copyfile(video, '.tmp/' + video)
             self.log_frame.set_log(video + 'の無音部分を検知します')
-            cut_sections = self.silence_sections(video)
+            cut_sections = videdi_util.silence_sections(video)
             if len(cut_sections) == 0:
                 self.log_frame.set_log('無音部分がありませんでした')
                 continue
-            video_sections = self.video_sections(cut_sections, video)
-            video_sections = self.arrange_sections(video_sections, self.min_time, self.margin_time)
+            video_sections = videdi_util.video_sections(cut_sections, video)
+            video_sections = videdi_util.arrange_sections(video_sections, self.min_time, self.margin_time)
             if self.jumpcut_fix_bln.get():
-                video_sections = self.all_sections(video_sections, video)
+                video_sections = videdi_util.all_sections(video_sections, video)
             self.log_frame.set_log(video + 'の音声認識のために動画をカットします')
             shutil.copyfile(video, '.tmp/' + video)
             jumpcut_dir, video_sections = self.cut_video(self.process_dir_path + '/.tmp', video_sections, video)
@@ -612,15 +502,15 @@ class Videdi:
                                         jumpcut_dir.split('/')[-1] + '_subtitle')
             for j, jumpcut_video in enumerate(jumpcut_video_list):
                 text_list = [jumpcut_video.split('.')[0] + '.txt', ]
-                self.make_srt(jumpcut_dir, jumpcut_video, text_path, text_list,
-                              [[0.0, video_sections[j][1] - video_sections[j][0]], ])
+                videdi_util.make_srt(jumpcut_dir, jumpcut_video, text_path, text_list,
+                                     [[0.0, video_sections[j][1] - video_sections[j][0]], ])
                 if self.subtitle_fix_bln.get():
                     self.decided = False
                     while not self.decided:
                         self.thread_event = threading.Event()
-                        self.make_srt(jumpcut_dir, jumpcut_video, text_path, text_list,
-                                      [[0.0, video_sections[j][1] - video_sections[j][0]], ])
-                        jumpcut_video_subtitle = self.print_subtitle(jumpcut_dir, jumpcut_video, jumpcut_dir)
+                        videdi_util.make_srt(jumpcut_dir, jumpcut_video, text_path, text_list,
+                                             [[0.0, video_sections[j][1] - video_sections[j][0]], ])
+                        jumpcut_video_subtitle = videdi_util.print_subtitle(jumpcut_dir, jumpcut_video, jumpcut_dir)
                         thread = threading.Thread(target=self.play_video_for_subtitle,
                                                   args=[jumpcut_video_subtitle,
                                                         text_path + '/' + os.path.splitext(jumpcut_video)[0] + '.txt'])
@@ -631,12 +521,12 @@ class Videdi:
                             os.remove(jumpcut_video_subtitle)
                         thread.join()
                 else:
-                    self.print_subtitle(jumpcut_dir, jumpcut_video, jumpcut_dir)
+                    videdi_util.print_subtitle(jumpcut_dir, jumpcut_video, jumpcut_dir)
                 s = str(int((j+1)*100/len(jumpcut_video_list)))
                 self.log_frame.set_log('字幕付け' + '{:>3}'.format(s) + '%完了')
                 os.remove(jumpcut_dir + '/' + jumpcut_video)
             # 動画を結合
-            self.combine_video(jumpcut_dir, os.path.splitext(video)[0] + '_jumpcut_subtitle.mp4')
+            videdi_util.combine_video(jumpcut_dir, os.path.splitext(video)[0] + '_jumpcut_subtitle.mp4')
             self.jumpcut_fix_bln.set(jumpcut_fix_bln)
             self.subtitle_fix_bln.set(subtitle_fix_bln)
             self.log_frame.set_log(video + 'をジャンプカットして字幕を付けました')
@@ -756,69 +646,6 @@ class Videdi:
         os.rmdir('.tmp')
         os.chdir(self.process_dir_path)
         return
-
-# ----------------------------ファイル分割できそう(ここから)-------------------------------
-
-    # srtファイル作成
-    def make_srt(self, video_dir, video, text_path, text_list, subtitle_sections):
-        def time_for_srt(time):
-            result = []
-            hours = int(time / 3600)
-            result += str(hours).zfill(2) + ':'
-            time -= hours * 3600
-            minutes = int(time / 60)
-            result += str(minutes).zfill(2) + ':'
-            time -= minutes * 60
-            seconds = int(time)
-            result += str(seconds).zfill(2) + ','
-            time -= seconds
-            microseconds = round(time * 1000)
-            result += str(microseconds).zfill(3)
-            return ''.join(result)
-        with open(video_dir + '/' + video.split('.')[0] + '_subtitle.srt', mode='w', encoding='utf8') as wf:
-            for i, text in enumerate(text_list):
-                wf.write(str(i + 1) + '\n')
-                sec_num = i
-                time_info = time_for_srt(
-                    subtitle_sections[sec_num][0]) + ' --> ' + time_for_srt(subtitle_sections[sec_num][1])
-                wf.write(time_info + '\n')
-                with open(text_path + '/' + text, mode='r', encoding='utf8') as rf:
-                    wf.write(rf.read() + '\n\n')
-        return
-
-    # 動画の字幕焼き付け
-    def print_subtitle(self, video_dir, video, srt_path):
-        try:
-            new_file_path = videdi_util.check_path(video_dir + '/' + video.split('.')[0] + '_subtitle.mp4')
-            command = [FFMPEG_PATH, '-i', video_dir + '/' + video, '-vf',
-                       'subtitles=' + srt_path + '/' + video.split('.')[0] + r"_subtitle.srt:force_style='FontSize=10'",
-                       new_file_path]
-            subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        except Exception as e:
-            print('error:print_subtitle method')
-            print(e)
-            self.log_frame.set_log('error:print_subtitle method')
-            return
-        return video_dir + '/' + video.split('.')[0] + '_subtitle.mp4'
-
-    # 動画の結合
-    def combine_video(self, video_dir, output_name):
-        video_list = videdi_util.search_videos(video_dir)
-        try:
-            with open(video_dir + '/combine.txt', mode='w', encoding='utf8') as wf:
-                for i, video in enumerate(video_list):
-                    wf.write('file ' + video_dir + '/' + video + '\n')
-            output_name = videdi_util.check_path(output_name)
-            command = [FFMPEG_PATH, '-f', 'concat', '-safe', '0', '-i', video_dir + '/combine.txt',
-                       '-c', 'copy', output_name]
-            subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            os.remove(video_dir + '/combine.txt')
-        except Exception as e:
-            print('error:combine_video method')
-            print(e)
-        return
-
-# -------------------ファイル分割できそう(ここまで)-----------------------------
 
 
 def main():
