@@ -28,7 +28,7 @@ else:
 
 
 WINDOW_WIDTH = 700
-WINDOW_HEIGHT = 550
+WINDOW_HEIGHT = 600
 
 
 class Videdi:
@@ -104,37 +104,51 @@ class Videdi:
         self.log_reset_button.place(relx=self.lr_button_relx, y=self.lr_button_pos_y,
                                     relwidth=self.lr_button_relwidth, height=self.lr_button_height)
         # 処理選択ラベル
-        self.run_choices_pos_y = self.scroll_pos_y + self.scroll_height + 20
+        self.run_choices_pos_y = self.scroll_pos_y + self.scroll_height + 10
         self.run_choices_lab = tk.Label(text='処理選択', font=bold_font)
         self.run_choices_lab.place(relx=0.05, y=self.run_choices_pos_y)
         # 処理のドロップダウンメニュー
         self.process_list = ['ジャンプカット', 'ジャンプカットして字幕を付ける']
         self.current_process = tk.StringVar(self.root)
         self.current_process.set(self.process_list[0])
-        self.current_process.trace("w", self.put_options)
+        self.current_process.trace("w", self.set_options)
         self.process_opt = tk.OptionMenu(self.root, self.current_process, *self.process_list)
         self.process_opt.config(width=19)
         self.process_opt.place(relx=0.2, y=self.run_choices_pos_y)
         self.process_opt.config(state='disable')
-        # オプション選択ラベル
+        # オプションの列
         self.option_pos_y = self.run_choices_pos_y + 30
+        self.option2_pos_y = self.option_pos_y + 25
+        self.option3_pos_y = self.option2_pos_y + 25
+        # オプション選択ラベル
         self.option_lab = tk.Label(text='オプション', font=bold_font)
         self.option_lab.place(relx=0.05, y=self.option_pos_y)
         # ジャンプカット修正チェックボックス
         self.jumpcut_fix_bln = tk.BooleanVar()
         self.jumpcut_fix_bln.set(False)
         self.jumpcut_fix_chk = tk.Checkbutton(self.root, variable=self.jumpcut_fix_bln, text='ジャンプカット修正')
-        # ジャンプカット動画の最小時間を設定(単位:秒)
-        self.min_time = 0.5
-        # ジャンプカット動画の前後の余裕を設定(単位:秒)
-        self.margin_time = 0.2
         # 字幕修正チェックボックス
         self.subtitle_fix_bln = tk.BooleanVar()
         self.subtitle_fix_bln.set(False)
         self.subtitle_fix_chk = tk.Checkbutton(self.root, variable=self.subtitle_fix_bln, text='字幕修正')
-        self.put_options()
+        # 有音部分の最小時間を設定(単位:秒)
+        self.min_time_lab = tk.Label(text='有音部分の最小時間')
+        self.min_time_unit_lab = tk.Label(text='(秒)')
+        self.min_time = tk.StringVar()
+        self.min_time.set('0.5')
+        self.min_time_spinbox = tk.Spinbox(self.root, format='%1.1f', textvariable=self.min_time, from_=0, to=1.0,
+                                           increment=0.1, state='readonly')
+        # 有音部分の前後の余裕を設定(単位:秒)
+        self.margin_time_lab = tk.Label(text='有音部分の前後の余裕')
+        self.margin_time_unit_lab = tk.Label(text='(秒)')
+        self.margin_time = tk.StringVar()
+        self.margin_time.set('0.2')
+        self.margin_time_spinbox = tk.Spinbox(self.root, format='%1.2f', textvariable=self.margin_time, from_=0, to=1.0,
+                                           increment=0.05, state='readonly')
+        # オプションをセット
+        self.set_options()
         # 実行ボタン
-        self.run_button_pos_y = self.option_pos_y + 30
+        self.run_button_pos_y = self.option3_pos_y + 40
         self.run_button_height = 25
         self.run_button_relwidth = 0.1
         self.run_button = tk.Button(text='実行', state='disable', command=self.run_button, font=button_font,
@@ -175,6 +189,8 @@ class Videdi:
         self.process_opt.configure(state='disable')
         self.jumpcut_fix_chk.configure(state='disable')
         self.subtitle_fix_chk.configure(state='disable')
+        self.min_time_spinbox.configure(state='disable')
+        self.margin_time_spinbox.configure(state='disable')
         self.run_button.configure(state='disabled')
         # フォルダを選択する
         self.process_dir_path = filedialog.askdirectory(initialdir=idir)
@@ -201,7 +217,7 @@ class Videdi:
                 self.process_opt.configure(state='normal')
                 self.run_button.configure(state='normal')
                 # オプション表示
-                self.put_options()
+                self.set_options()
             # 選択されたフォルダ内に動画がない場合
             else:
                 self.current_dir_var.set(dir_name + 'フォルダには処理できる動画ファイルがありません。')
@@ -216,6 +232,8 @@ class Videdi:
         self.process_opt.configure(state='disable')
         self.jumpcut_fix_chk.configure(state='disable')
         self.subtitle_fix_chk.configure(state='disable')
+        self.min_time_spinbox.configure(state='disable')
+        self.margin_time_spinbox.configure(state='disable')
         self.run_button.configure(state='disable')
 
     # ボタン有効化
@@ -225,10 +243,12 @@ class Videdi:
         self.process_opt.configure(state='normal')
         self.jumpcut_fix_chk.configure(state='normal')
         self.subtitle_fix_chk.configure(state='normal')
+        self.min_time_spinbox.configure(state='readonly')
+        self.margin_time_spinbox.configure(state='readonly')
         self.run_button.configure(state='normal')
 
     # 処理の内容からオプションを表示
-    def put_options(self, *args):
+    def set_options(self, *args):
         # オプションを初期化
         self.jumpcut_fix_bln.set(False)
         self.subtitle_fix_bln.set(False)
@@ -237,20 +257,31 @@ class Videdi:
         self.subtitle_fix_chk.place_forget()
         process = self.current_process.get()
         # 動画が入ったフォルダが選択されていたら、ウィジェットを有効化する
-        widget_state = 'disable'
+        chk_state = 'disable'
+        spinbox_state = 'disable'
         if self.dir_is_available:
-            widget_state = 'normal'
-        # 処理ごとにオプションの表示を変える
+            chk_state = 'normal'
+            spinbox_state = 'readonly'
+        # ジャンプカットのオプションをセット
+        self.min_time_lab.place(relx=0.2, y=self.option2_pos_y)
+        self.min_time_spinbox.place(relx=0.385, y=self.option2_pos_y, width=60)
+        self.min_time_unit_lab.place(relx=0.47, y=self.option2_pos_y)
+        self.min_time_spinbox.configure(state=spinbox_state)
+        self.margin_time_lab.place(relx=0.2, y=self.option3_pos_y)
+        self.margin_time_spinbox.place(relx=0.385, y=self.option3_pos_y, width=60)
+        self.margin_time_unit_lab.place(relx=0.47, y=self.option3_pos_y)
+        self.margin_time_spinbox.configure(state=spinbox_state)
+        # 処理ごとにオプションの表示をセット
         if process == 'ジャンプカット':
             self.jumpcut_fix_chk.place(relx=0.2, y=self.option_pos_y)
-            self.jumpcut_fix_chk.configure(state=widget_state)
+            self.jumpcut_fix_chk.configure(state=chk_state)
         elif process == 'ジャンプカットして字幕を付ける':
             self.jumpcut_fix_chk.place(relx=0.2, y=self.option_pos_y)
-            self.jumpcut_fix_chk.configure(state=widget_state)
-            self.subtitle_fix_chk.place(relx=0.4, y=self.option_pos_y)
-            self.subtitle_fix_chk.configure(state=widget_state)
+            self.jumpcut_fix_chk.configure(state=chk_state)
+            self.subtitle_fix_chk.place(relx=0.5, y=self.option_pos_y)
+            self.subtitle_fix_chk.configure(state=chk_state)
         else:
-            self.log_frame.set_log('error:put_options method')
+            self.log_frame.set_log('error:set_options method')
 
     # 処理実行ボタンの処理
     def run_button(self):
@@ -284,7 +315,7 @@ class Videdi:
                 self.log_frame.set_log(video + 'には無音部分がありませんでした')
                 continue
             video_sections = videdi_util.video_sections(cut_sections, video)
-            video_sections = videdi_util.arrange_sections(video_sections, self.min_time, self.margin_time)
+            video_sections = videdi_util.arrange_sections(video_sections, float(self.min_time.get()), float(self.margin_time.get()))
             video_sections = videdi_util.all_sections(video_sections, video)
             jumpcut_dir, _ = self.cut_video(video_dir_path, video_sections, video)
             videdi_util.combine_video(jumpcut_dir, os.path.splitext(video)[0] + '_jumpcut.mp4')
@@ -426,7 +457,7 @@ class Videdi:
                 self.log_frame.set_log('無音部分がありませんでした')
                 continue
             video_sections = videdi_util.video_sections(cut_sections, video)
-            video_sections = videdi_util.arrange_sections(video_sections, self.min_time, self.margin_time)
+            video_sections = videdi_util.arrange_sections(video_sections, float(self.min_time.get()), float(self.margin_time.get()))
             video_sections = videdi_util.all_sections(video_sections, video)
             self.log_frame.set_log(video + 'の音声認識のために動画をカットします')
             shutil.copyfile(video, '.tmp/' + video)
