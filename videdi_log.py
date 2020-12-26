@@ -81,6 +81,14 @@ class LogFrame(ClassFrame):
         self.set_log('----------------------------------------------------------')
         return
 
+    # 進捗ログのセット
+    def set_progress_log(self, text, i, sum):
+        before_progress = int((i - 1) * 100 / sum)
+        current_progress = int(i * 100 / sum)
+        if  current_progress != before_progress:
+            self.set_log(text + '{:>3}'.format(current_progress) + '%完了')
+        return
+
     # ログのリセット
     def reset_all_logs(self):
         for i in range(len(self.log_labels)):
@@ -88,11 +96,11 @@ class LogFrame(ClassFrame):
         self.log_vars = []
         self.log_labels = []
         self.log_color = 0
-        # --       --     ----     ----      -----    ----     ----
+        # --       --    ----     ----      -----    ----     ----
         #  \\     //     -  -    ||   \\    ||---    ||   \\   _  _
         #   \\   //      | |     ||   ||    ||__|    ||   ||   ||
         #    \\ //      -  -     ||  //     ||___    ||  //   _  _
-        #     \_/      ----     ----       -----    ----     ----
+        #     \_/       ----     ----       -----    ----     ----
         for i in range(2):
             self.set_log('')
         self.set_log(r'       \_/          ----      ----        -----      ----          ----')
@@ -102,4 +110,3 @@ class LogFrame(ClassFrame):
         self.set_log(r'--          --     ----     ----        -----     ----          ----')
         self.set_log('')
         return
-

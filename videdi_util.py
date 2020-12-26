@@ -114,43 +114,40 @@ def video_sections(sections, video):
     return new_sections
 
 
-# sectionsにオプションで変更を加える
+# sectionsに変更を加える
 def arrange_sections(sections, min_time, margin_time):
     new_sections = []
+    # 最小時間未満のセクションを削除した新しい配列を作る
     for i in range(len(sections)):
         if (sections[i][1] - sections[i][0]) < min_time:
             continue
         else:
-            if i == 0 and sections[0][0] < margin_time:
-                new_sections.append([sections[i][0], sections[i][1] + margin_time])
-            else:
-                new_sections.append([sections[i][0] - margin_time, sections[i][1] + margin_time])
-    try:
-        new_sections[-1][1] -= margin_time
-    except Exception as e:
-        print('error:arrange_sections method')
-        print(e)
+            new_sections.append([sections[i][0] - margin_time, sections[i][1] + margin_time, True])
+    if new_sections[0][0] < 0:
+        new_sections[0][0] = 0.0
+    for i in range(len(new_sections) - 1):
+        if new_sections[i + 1][0] < new_sections[i][1]:
+            new_sections[i + 1][0] = (new_sections[i + 1][0] + new_sections[i][1]) / 2
+            new_sections[i][1] = new_sections[i + 1][0]
+    for i in range(len(new_sections)):
+        new_sections[i][2] = True
     return new_sections
 
 
 # ジャンプカットの修正をする場合のカットしない部分new_sectionsを作成
 def all_sections(sections, video):
-    time_list = []
-    if sections[0][0] != 0.0:
-        time_list.append(float(0.0))
-        time_list.append(sections[0][0])
+    new_sections = []
+    if sections[0][0] > 0.5:
+        new_sections.append([float(0.0), sections[0][0], False])
     for i in range(len(sections)-1):
-        time_list.append(sections[i][0])
-        time_list.append(sections[i][1])
-        time_list.append(sections[i][1])
-        time_list.append(sections[i+1][0])
-    time_list.append(sections[-1][0])
-    time_list.append(sections[-1][1])
+        new_sections.append(sections[i])
+        if sections[i][1] == sections[i+1][0]:
+            continue
+        new_sections.append([sections[i][1], sections[i+1][0], False])
+    new_sections.append(sections[-1])
     duration = get_video_duration(video)
-    if sections[-1][1] < duration:
-        time_list.append(sections[-1][1])
-        time_list.append(duration)
-    new_sections = list(zip(*[iter(time_list)] * 2))
+    if duration - sections[-1][1] > 0.5:
+        new_sections.append([sections[-1][1], duration, False])
     return new_sections
 
 
