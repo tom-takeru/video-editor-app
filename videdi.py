@@ -142,9 +142,9 @@ class Videdi:
         self.margin_time_lab = tk.Label(text='有音部分の前後の余裕')
         self.margin_time_unit_lab = tk.Label(text='(秒)')
         self.margin_time = tk.StringVar()
-        self.margin_time.set('0.2')
+        self.margin_time.set('0.1')
         self.margin_time_spinbox = tk.Spinbox(self.root, format='%1.2f', textvariable=self.margin_time, from_=0, to=1.0,
-                                              increment=0.05, state='readonly')
+                                              increment=0.01, state='readonly')
         # オプションをセット
         self.set_options()
         # 実行ボタン
@@ -337,6 +337,142 @@ class Videdi:
         # ジャンプカット完了ログ
         self.log_frame.set_big_log(self.process_dir_path.split('/')[-1] + 'フォルダ内の動画をジャンプカットしました')
 
+# 一応怖いから取っておくーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー(ここから)
+
+    # # 音のある部分を出力
+    # def cut_video(self, video_dir, sections, video):
+    #     digit = len(str(len(sections)))
+    #     video_name = video.split('.')[0]
+    #     jumpcut_dir = videdi_util.check_path(video_dir + '/' + video_name + '_jumpcut/')
+    #     os.mkdir(jumpcut_dir)
+    #     # sectionsにしたがって動画をカット
+    #     for i in range(len(sections)):
+    #         split_file = jumpcut_dir + '/' + video_name + '_' + format(i+1, '0>' + str(digit)) + '.mp4'
+    #         command = [FFMPEG_PATH, '-i', video, '-ss', str(sections[i][0]), '-t',
+    #                    str(sections[i][1] - sections[i][0]), split_file]
+    #         subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    #         # 進捗をパーセントで表示
+    #         self.log_frame.set_progress_log('カット処理', i + 1, len(sections))
+    #     self.log_frame.set_log('カット処理完了')
+    #     cut_or_not = []
+    #     for i in range(len(sections)):
+    #         cut_or_not.append(not sections[i][2])
+    #     if self.jumpcut_fix_bln.get():
+    #         section_num = 0
+    #         while True:
+    #             split_file = jumpcut_dir + '/' + video_name + '_' + format(section_num+1, '0>' + str(digit)) + '.mp4'
+    #             self.thread_event = threading.Event()
+    #             thread = threading.Thread(target=self.play_video_for_cut, args=[split_file, cut_or_not, section_num])
+    #             thread.start()
+    #             self.thread_event.wait()
+    #             thread.join()
+    #             # 進捗をパーセントで表示
+    #             self.log_frame.set_progress_log('カット選択処理', section_num + 1, len(sections))
+    #             if self.next_action[0] == 'cut':
+    #                 cut_or_not[section_num] = True
+    #             elif self.next_action[0] == 'leave':
+    #                 cut_or_not[section_num] = False
+    #             elif self.next_action[0] == 'finish':
+    #                 break
+    #             if self.next_action[1] == 'back':
+    #                 if section_num != 0:
+    #                     section_num -= 1
+    #             elif self.next_action[1] == 'go':
+    #                 if section_num != len(sections)-1:
+    #                     section_num += 1
+    #     video_num = 1
+    #     new_sections = []
+    #     for i in range(len(sections)):
+    #         split_file = jumpcut_dir + '/' + video_name + '_' + format(i + 1, '0>' + str(digit)) + '.mp4'
+    #         if cut_or_not[i]:
+    #             os.remove(split_file)
+    #         else:
+    #             os.rename(split_file,
+    #                       jumpcut_dir + '/' + video_name + '_' + format(video_num, '0>' + str(digit)) + '.mp4')
+    #             video_num += 1
+    #             new_sections.append(sections[i])
+    #     if self.jumpcut_fix_bln.get():
+    #         self.log_frame.set_log('カット選択処理完了')
+    #     return jumpcut_dir, new_sections
+    #
+    # # ジャンプカット修正のためのウィンドウを表示
+    # def play_video_for_cut(self, video_path, cut_or_not, section_num):
+    #     window = tk.Toplevel()
+    #     window.geometry(str(WINDOW_WIDTH) + 'x' + str(WINDOW_HEIGHT) + '+' + str(self.window_width) + '+0')
+    #     window.title('ジャンプカット修正')
+    #     frame = tk.Frame(window)
+    #     frame.pack()
+    #     frame.video_label = tk.Label(window)
+    #     frame.video_label.pack()
+    #     player = video_audio_player.Video_Audio_player()
+    #
+    #     def end_process():
+    #         player.stop()
+    #         window.destroy()
+    #         self.thread_event.set()
+    #         return
+    #
+    #     def select_back():
+    #         if cut_bln.get():
+    #             self.next_action = ['cut', 'back']
+    #         else:
+    #             self.next_action = ['leave', 'back']
+    #         end_process()
+    #         return
+    #
+    #     def select_go():
+    #         if cut_bln.get():
+    #             self.next_action = ['cut', 'go']
+    #         else:
+    #             self.next_action = ['leave', 'go']
+    #         end_process()
+    #         return
+    #
+    #     def finish_fix():
+    #         self.next_action = ['finish', '']
+    #         end_process()
+    #         return
+    #     window.protocol("WM_DELETE_WINDOW", select_go)
+    #     text = ''
+    #     for i in range(51):
+    #         if int(section_num*50/(len(cut_or_not)-1)) == i:
+    #             text += '○'
+    #         else:
+    #             text += '・'
+    #     var_font = font.Font(window, size=14)
+    #     frame.label = tk.Label(window, text=text, font=var_font)
+    #     frame.label.place(relx=0, rely=0.9, relwidth=1.0)
+    #     select_button_rel_y = 0.95
+    #     select_button_height = 25
+    #     select_button_relwidth = 0.1
+    #     # 前へボタン
+    #     back_button = tk.Button(window, text='前へ', command=select_back, highlightbackground=self.button_background,
+    #                            fg='black', highlightthickness=0)
+    #     back_button.place(relx=0.39, rely=select_button_rel_y, relwidth=select_button_relwidth,
+    #                      height=select_button_height)
+    #     # 次へボタン
+    #     go_button = tk.Button(window, text='次へ', command=select_go, highlightbackground=self.button_background,
+    #                              fg='black', highlightthickness=0)
+    #     go_button.place(relx=0.51, rely=select_button_rel_y, relwidth=select_button_relwidth,
+    #                        height=select_button_height)
+    #     # カットチェックボックス
+    #     cut_bln = tk.BooleanVar()
+    #     cut_bln.set(cut_or_not[section_num])
+    #     cut_chk = tk.Checkbutton(window, variable=cut_bln, text='カットする')
+    #     cut_chk.place(relx=0.62, rely=select_button_rel_y)
+    #     # 完了ボタン
+    #     finish_button = tk.Button(window, text='完了', command=finish_fix, highlightbackground=self.button_background,
+    #                              fg='black', highlightthickness=0)
+    #     finish_button.place(relx=0.9, rely=select_button_rel_y, relwidth=select_button_relwidth,
+    #                        height=select_button_height)
+    #     # 動画を読み込む
+    #     player.openfile(video_path, frame.video_label)
+    #     # 動画を再生する
+    #     player.play()
+    #     return
+
+# 一応怖いから取っておくーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー(ここまで)
+
     # 音のある部分を出力
     def cut_video(self, video_dir, sections, video):
         digit = len(str(len(sections)))
@@ -356,29 +492,98 @@ class Videdi:
         for i in range(len(sections)):
             cut_or_not.append(not sections[i][2])
         if self.jumpcut_fix_bln.get():
+            window = tk.Toplevel()
+            window.geometry(str(WINDOW_WIDTH) + 'x' + str(WINDOW_HEIGHT) + '+' + str(self.window_width) + '+0')
+            window.title('ジャンプカット修正')
+            frame = tk.Frame(window)
+            frame.pack()
+
+            def end_process():
+                player.stop()
+                self.thread_event.set()
+                return
+
+            def select_back():
+                if cut_bln.get():
+                    self.next_action = ['cut', 'back']
+                else:
+                    self.next_action = ['leave', 'back']
+                end_process()
+                return
+
+            def select_go():
+                if cut_bln.get():
+                    self.next_action = ['cut', 'go']
+                else:
+                    self.next_action = ['leave', 'go']
+                end_process()
+                return
+
+            def finish_fix():
+                self.next_action = ['finish', '']
+                player.stop()
+                window.destroy()
+                self.thread_event.set()
+                return
+
+            window.protocol("WM_DELETE_WINDOW", finish_fix)
             section_num = 0
             while True:
-                split_file = jumpcut_dir + '/' + video_name + '_' + format(section_num+1, '0>' + str(digit)) + '.mp4'
+                frame.video_label = tk.Label(window)
+                frame.video_label.pack()
                 self.thread_event = threading.Event()
-                thread = threading.Thread(target=self.play_video_for_cut, args=[split_file, cut_or_not[section_num]])
-                thread.start()
+                split_file = jumpcut_dir + '/' + video_name + '_' + format(section_num+1, '0>' + str(digit)) + '.mp4'
+                text = ''
+                for i in range(51):
+                    if int(section_num * 50 / (len(cut_or_not) - 1)) == i:
+                        text += '○'
+                    else:
+                        text += '・'
+                var_font = font.Font(window, size=14)
+                frame.label = tk.Label(window, text=text, font=var_font)
+                frame.label.place(relx=0, rely=0.9, relwidth=1.0)
+                select_button_rel_y = 0.95
+                select_button_height = 25
+                select_button_relwidth = 0.1
+                # 前へボタン
+                back_button = tk.Button(window, text='前へ', command=select_back, highlightbackground=self.button_background,
+                                        fg='black', highlightthickness=0)
+                back_button.place(relx=0.39, rely=select_button_rel_y, relwidth=select_button_relwidth,
+                                  height=select_button_height)
+                # 次へボタン
+                go_button = tk.Button(window, text='次へ', command=select_go, highlightbackground=self.button_background,
+                                      fg='black', highlightthickness=0)
+                go_button.place(relx=0.51, rely=select_button_rel_y, relwidth=select_button_relwidth,
+                                height=select_button_height)
+                # カットチェックボックス
+                cut_bln = tk.BooleanVar()
+                cut_bln.set(cut_or_not[section_num])
+                cut_chk = tk.Checkbutton(window, variable=cut_bln, text='カットする')
+                cut_chk.place(relx=0.62, rely=select_button_rel_y)
+                # 完了ボタン
+                finish_button = tk.Button(window, text='完了', command=finish_fix, highlightbackground=self.button_background,
+                                          fg='black', highlightthickness=0)
+                finish_button.place(relx=0.9, rely=select_button_rel_y, relwidth=select_button_relwidth,
+                                    height=select_button_height)
+                player = video_audio_player.Video_Audio_player()
+                # 動画を読み込む
+                player.openfile(split_file, frame.video_label)
+                # 動画を再生する
+                player.play()
                 self.thread_event.wait()
-                thread.join()
-                # 進捗をパーセントで表示
-                self.log_frame.set_progress_log('カット選択処理', section_num + 1, len(sections))
+                frame.video_label.destroy()
                 if self.next_action[0] == 'cut':
                     cut_or_not[section_num] = True
                 elif self.next_action[0] == 'leave':
                     cut_or_not[section_num] = False
-                elif self.next_action[0] == 'auto_cut':
+                elif self.next_action[0] == 'finish':
                     break
                 if self.next_action[1] == 'back':
                     if section_num != 0:
                         section_num -= 1
                 elif self.next_action[1] == 'go':
-                    section_num += 1
-                if section_num >= len(sections):
-                    break
+                    if section_num != len(sections)-1:
+                        section_num += 1
         video_num = 1
         new_sections = []
         for i in range(len(sections)):
@@ -391,71 +596,9 @@ class Videdi:
                 video_num += 1
                 new_sections.append(sections[i])
         if self.jumpcut_fix_bln.get():
-            self.log_frame.set_log('カット選択処理完了')
+            self.log_frame.set_log('ジャンプカット修正完了')
         return jumpcut_dir, new_sections
 
-    # ジャンプカット修正のためのウィンドウを表示
-    def play_video_for_cut(self, video_path, current_cut_bln):
-        window = tk.Toplevel()
-        window.geometry("700x550" + '+' + str(self.window_width) + '+0')
-        window.title('この部分を使いますか？')
-        frame = tk.Frame(window)
-        frame.pack()
-        frame.video_label = tk.Label(window)
-        frame.video_label.pack()
-        player = video_audio_player.Video_Audio_player()
-
-        def end_process():
-            player.stop()
-            window.destroy()
-            self.thread_event.set()
-            return
-
-        def select_back():
-            if cut_bln.get():
-                self.next_action = ['cut', 'back']
-            else:
-                self.next_action = ['leave', 'back']
-            end_process()
-            return
-
-        def select_go():
-            if cut_bln.get():
-                self.next_action = ['cut', 'go']
-            else:
-                self.next_action = ['leave', 'go']
-            end_process()
-            end_process()
-            return
-
-        def on_closing():
-            self.next_action = ['auto_cut', '']
-            end_process()
-            return
-        window.protocol("WM_DELETE_WINDOW", on_closing)
-
-        text = 'この部分を使いますか?(このウィンドウを消すと、以降は自動カットします)'
-        frame.label = tk.Label(window, text=text)
-        frame.label.place(relx=0.2, rely=0.9)
-        select_button_rel_y = 0.95
-        select_button_height = 25
-        select_button_relwidth = 0.1
-        back_button = tk.Button(window, text='前へ', command=select_back, highlightbackground=self.button_background,
-                               fg='black', highlightthickness=0)
-        back_button.place(relx=0.39, rely=select_button_rel_y, relwidth=select_button_relwidth,
-                         height=select_button_height)
-        go_button = tk.Button(window, text='次へ', command=select_go, highlightbackground=self.button_background,
-                                 fg='black', highlightthickness=0)
-        go_button.place(relx=0.51, rely=select_button_rel_y, relwidth=select_button_relwidth,
-                           height=select_button_height)
-        # カットチェックボックス
-        cut_bln = tk.BooleanVar()
-        cut_bln.set(current_cut_bln)
-        cut_chk = tk.Checkbutton(window, variable=cut_bln, text='カットする')
-        cut_chk.place(relx=0.62, rely=select_button_rel_y)
-        player.openfile(video_path, frame.video_label)
-        player.play()
-        return
 
     # ジャンプカットして字幕を付ける処理
     def jumpcut_and_add_subtitle(self):
@@ -527,8 +670,8 @@ class Videdi:
     # 字幕修正のためのウィンドウを表示
     def play_video_for_subtitle(self, video_path, text_path):
         window = tk.Toplevel()
-        window.geometry("700x550" + '+' + str(self.window_width) + '+0')
-        window.title('このテキストを使いますか？')
+        window.geometry(str(WINDOW_WIDTH) + 'x' + str(WINDOW_HEIGHT) + '+' + str(self.window_width) + '+0')
+        window.title('字幕修正')
         frame = tk.Frame(window)
         frame.pack()
         player = video_audio_player.Video_Audio_player()
