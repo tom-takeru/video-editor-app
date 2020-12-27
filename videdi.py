@@ -144,7 +144,7 @@ class Videdi:
         self.margin_time = tk.StringVar()
         self.margin_time.set('0.2')
         self.margin_time_spinbox = tk.Spinbox(self.root, format='%1.2f', textvariable=self.margin_time, from_=0, to=1.0,
-                                           increment=0.05, state='readonly')
+                                              increment=0.05, state='readonly')
         # オプションをセット
         self.set_options()
         # 実行ボタン
@@ -157,7 +157,7 @@ class Videdi:
         self.run_button.place(relx=(1-self.run_button_relwidth)/2, y=self.run_button_pos_y,
                               relwidth=self.run_button_relwidth, height=self.run_button_height)
         self.thread_event = None
-        self.cut = False
+        self.next_action = ''
         self.decided = False
         # メインループでイベント待ち
         if __name__ == '__main__':
@@ -186,12 +186,7 @@ class Videdi:
         # フォルダ選択済みフラグをおろす
         self.dir_is_available = False
         # 実行系ボタン無効化
-        self.process_opt.configure(state='disable')
-        self.jumpcut_fix_chk.configure(state='disable')
-        self.subtitle_fix_chk.configure(state='disable')
-        self.min_time_spinbox.configure(state='disable')
-        self.margin_time_spinbox.configure(state='disable')
-        self.run_button.configure(state='disabled')
+        self.disable_all_button()
         # フォルダを選択する
         self.process_dir_path = filedialog.askdirectory(initialdir=idir)
         # フォルダが選択されなかった場合、直前に選択していたフォルダを選択
@@ -214,16 +209,19 @@ class Videdi:
                 # フォルダ選択済みフラグを立てる
                 self.dir_is_available = True
                 # 処理のボタン有効化
-                self.process_opt.configure(state='normal')
-                self.run_button.configure(state='normal')
+                self.enable_all_button()
                 # オプション表示
                 self.set_options()
+                return
             # 選択されたフォルダ内に動画がない場合
             else:
                 self.current_dir_var.set(dir_name + 'フォルダには処理できる動画ファイルがありません。')
         # 選択されたフォルダが存在しない場合
         else:
             self.current_dir_var.set('編集したい動画のあるフォルダを選択してください')
+        self.select_dir_button.configure(state='normal')
+        self.log_reset_button.configure(state='normal')
+        return
 
     # ボタン無効化
     def disable_all_button(self):
@@ -232,8 +230,12 @@ class Videdi:
         self.process_opt.configure(state='disable')
         self.jumpcut_fix_chk.configure(state='disable')
         self.subtitle_fix_chk.configure(state='disable')
+        self.min_time_lab.configure(foreground='#aaa')
         self.min_time_spinbox.configure(state='disable')
+        self.min_time_unit_lab.configure(foreground='#aaa')
+        self.margin_time_lab.configure(foreground='#aaa')
         self.margin_time_spinbox.configure(state='disable')
+        self.margin_time_unit_lab.configure(foreground='#aaa')
         self.run_button.configure(state='disable')
 
     # ボタン有効化
@@ -243,8 +245,12 @@ class Videdi:
         self.process_opt.configure(state='normal')
         self.jumpcut_fix_chk.configure(state='normal')
         self.subtitle_fix_chk.configure(state='normal')
+        self.min_time_lab.configure(foreground='black')
         self.min_time_spinbox.configure(state='readonly')
+        self.min_time_unit_lab.configure(foreground='black')
+        self.margin_time_lab.configure(foreground='black')
         self.margin_time_spinbox.configure(state='readonly')
+        self.margin_time_unit_lab.configure(foreground='black')
         self.run_button.configure(state='normal')
 
     # 処理の内容からオプションを表示
@@ -259,18 +265,24 @@ class Videdi:
         # 動画が入ったフォルダが選択されていたら、ウィジェットを有効化する
         chk_state = 'disable'
         spinbox_state = 'disable'
+        text_color = '#aaa'
         if self.dir_is_available:
             chk_state = 'normal'
             spinbox_state = 'readonly'
+            text_color = 'black'
         # ジャンプカットのオプションをセット
         self.min_time_lab.place(relx=0.2, y=self.option2_pos_y)
         self.min_time_spinbox.place(relx=0.385, y=self.option2_pos_y, width=60)
         self.min_time_unit_lab.place(relx=0.47, y=self.option2_pos_y)
+        self.min_time_lab.configure(foreground=text_color)
         self.min_time_spinbox.configure(state=spinbox_state)
+        self.min_time_unit_lab.configure(foreground=text_color)
         self.margin_time_lab.place(relx=0.2, y=self.option3_pos_y)
         self.margin_time_spinbox.place(relx=0.385, y=self.option3_pos_y, width=60)
         self.margin_time_unit_lab.place(relx=0.47, y=self.option3_pos_y)
+        self.margin_time_lab.configure(foreground=text_color)
         self.margin_time_spinbox.configure(state=spinbox_state)
+        self.margin_time_unit_lab.configure(foreground=text_color)
         # 処理ごとにオプションの表示をセット
         if process == 'ジャンプカット':
             self.jumpcut_fix_chk.place(relx=0.2, y=self.option_pos_y)
@@ -306,7 +318,6 @@ class Videdi:
         os.chdir(self.process_dir_path)
         video_dir_path = self.process_dir_path
         video_list = videdi_util.search_videos(self.process_dir_path)
-        jumpcut_fix_bln = self.jumpcut_fix_bln.get()
         for i, video in enumerate(video_list):
             self.log_frame.set_log(video + 'をジャンプカットします ' + str(i+1) + '/' + str(len(video_list)))
             self.log_frame.set_log(video + 'の無音部分を検知します')
@@ -315,12 +326,12 @@ class Videdi:
                 self.log_frame.set_log(video + 'には無音部分がありませんでした')
                 continue
             video_sections = videdi_util.video_sections(cut_sections, video)
-            video_sections = videdi_util.arrange_sections(video_sections, float(self.min_time.get()), float(self.margin_time.get()))
+            video_sections = videdi_util.arrange_sections(video_sections, float(self.min_time.get()),
+                                                          float(self.margin_time.get()))
             video_sections = videdi_util.all_sections(video_sections, video)
             jumpcut_dir, _ = self.cut_video(video_dir_path, video_sections, video)
             videdi_util.combine_video(jumpcut_dir, os.path.splitext(video)[0] + '_jumpcut.mp4')
             self.log_frame.set_log(video + 'をジャンプカットしました')
-            self.jumpcut_fix_bln.set(jumpcut_fix_bln)
         # ボタン有効化
         self.enable_all_button()
         # ジャンプカット完了ログ
@@ -328,7 +339,6 @@ class Videdi:
 
     # 音のある部分を出力
     def cut_video(self, video_dir, sections, video):
-        os.chdir(video_dir)
         digit = len(str(len(sections)))
         video_name = video.split('.')[0]
         jumpcut_dir = videdi_util.check_path(video_dir + '/' + video_name + '_jumpcut/')
@@ -342,45 +352,50 @@ class Videdi:
             # 進捗をパーセントで表示
             self.log_frame.set_progress_log('カット処理', i + 1, len(sections))
         self.log_frame.set_log('カット処理完了')
-        # 動画のカット選択処理
-        new_sections = []
-        video_num = 1
+        cut_or_not = []
         for i in range(len(sections)):
-            split_file = jumpcut_dir + '/' + video_name + '_' + format(i+1, '0>' + str(digit)) + '.mp4'
-            if self.jumpcut_fix_bln.get():
+            cut_or_not.append(not sections[i][2])
+        if self.jumpcut_fix_bln.get():
+            section_num = 0
+            while True:
+                split_file = jumpcut_dir + '/' + video_name + '_' + format(section_num+1, '0>' + str(digit)) + '.mp4'
                 self.thread_event = threading.Event()
-                thread = threading.Thread(target=self.play_video_for_cut, args=[split_file, ])
+                thread = threading.Thread(target=self.play_video_for_cut, args=[split_file, cut_or_not[section_num]])
                 thread.start()
                 self.thread_event.wait()
-                if self.cut:
-                    try:
-                        os.remove(split_file)
-                    except Exception as e:
-                        print('error:cut_video method')
-                        print(e)
-                        self.log_frame.set_log('error:cut_video method')
-                else:
-                    os.rename(split_file,
-                              jumpcut_dir + '/' + video_name + '_' + format(video_num, '0>' + str(digit)) + '.mp4')
-                    video_num += 1
-                    new_sections.append(sections[i])
                 thread.join()
                 # 進捗をパーセントで表示
-                self.log_frame.set_progress_log('カット選択処理', i + 1, len(sections))
+                self.log_frame.set_progress_log('カット選択処理', section_num + 1, len(sections))
+                if self.next_action[0] == 'cut':
+                    cut_or_not[section_num] = True
+                elif self.next_action[0] == 'leave':
+                    cut_or_not[section_num] = False
+                elif self.next_action[0] == 'auto_cut':
+                    break
+                if self.next_action[1] == 'back':
+                    if section_num != 0:
+                        section_num -= 1
+                elif self.next_action[1] == 'go':
+                    section_num += 1
+                if section_num >= len(sections):
+                    break
+        video_num = 1
+        new_sections = []
+        for i in range(len(sections)):
+            split_file = jumpcut_dir + '/' + video_name + '_' + format(i + 1, '0>' + str(digit)) + '.mp4'
+            if cut_or_not[i]:
+                os.remove(split_file)
             else:
-                if sections[i][2]:
-                    os.rename(split_file,
-                              jumpcut_dir + '/' + video_name + '_' + format(video_num, '0>' + str(digit)) + '.mp4')
-                    video_num += 1
-                    new_sections.append(sections[i])
-                else:
-                    os.remove(split_file)
+                os.rename(split_file,
+                          jumpcut_dir + '/' + video_name + '_' + format(video_num, '0>' + str(digit)) + '.mp4')
+                video_num += 1
+                new_sections.append(sections[i])
         if self.jumpcut_fix_bln.get():
             self.log_frame.set_log('カット選択処理完了')
         return jumpcut_dir, new_sections
 
     # ジャンプカット修正のためのウィンドウを表示
-    def play_video_for_cut(self, video_path):
+    def play_video_for_cut(self, video_path, current_cut_bln):
         window = tk.Toplevel()
         window.geometry("700x550" + '+' + str(self.window_width) + '+0')
         window.title('この部分を使いますか？')
@@ -396,43 +411,50 @@ class Videdi:
             self.thread_event.set()
             return
 
+        def select_back():
+            if cut_bln.get():
+                self.next_action = ['cut', 'back']
+            else:
+                self.next_action = ['leave', 'back']
+            end_process()
+            return
+
+        def select_go():
+            if cut_bln.get():
+                self.next_action = ['cut', 'go']
+            else:
+                self.next_action = ['leave', 'go']
+            end_process()
+            end_process()
+            return
+
         def on_closing():
-            self.jumpcut_fix_bln.set(False)
-            self.cut = False
+            self.next_action = ['auto_cut', '']
             end_process()
             return
         window.protocol("WM_DELETE_WINDOW", on_closing)
-        text = 'この部分を使いますか?(このウィンドウを消すと、以降自動でカットします)'
+
+        text = 'この部分を使いますか?(このウィンドウを消すと、以降は自動カットします)'
         frame.label = tk.Label(window, text=text)
         frame.label.place(relx=0.2, rely=0.9)
-
-        def select_cut():
-            self.cut = True
-            end_process()
-            return
-
-        def select_leave():
-            self.cut = False
-            end_process()
-            return
         select_button_rel_y = 0.95
         select_button_height = 25
         select_button_relwidth = 0.1
-        cut_button = tk.Button(window, text='カット', command=select_cut, highlightbackground=self.button_background,
+        back_button = tk.Button(window, text='前へ', command=select_back, highlightbackground=self.button_background,
                                fg='black', highlightthickness=0)
-        cut_button.place(relx=0.39, rely=select_button_rel_y, relwidth=select_button_relwidth,
+        back_button.place(relx=0.39, rely=select_button_rel_y, relwidth=select_button_relwidth,
                          height=select_button_height)
-        leave_button = tk.Button(window, text='残す', command=select_leave, highlightbackground=self.button_background,
+        go_button = tk.Button(window, text='次へ', command=select_go, highlightbackground=self.button_background,
                                  fg='black', highlightthickness=0)
-        leave_button.place(relx=0.51, rely=select_button_rel_y, relwidth=select_button_relwidth,
+        go_button.place(relx=0.51, rely=select_button_rel_y, relwidth=select_button_relwidth,
                            height=select_button_height)
-        try:
-            player.openfile(video_path, frame.video_label)
-            player.play()
-        except Exception as e:
-            print('error:play_video_for_cut method')
-            print(e)
-            return
+        # カットチェックボックス
+        cut_bln = tk.BooleanVar()
+        cut_bln.set(current_cut_bln)
+        cut_chk = tk.Checkbutton(window, variable=cut_bln, text='カットする')
+        cut_chk.place(relx=0.62, rely=select_button_rel_y)
+        player.openfile(video_path, frame.video_label)
+        player.play()
         return
 
     # ジャンプカットして字幕を付ける処理
@@ -457,7 +479,8 @@ class Videdi:
                 self.log_frame.set_log('無音部分がありませんでした')
                 continue
             video_sections = videdi_util.video_sections(cut_sections, video)
-            video_sections = videdi_util.arrange_sections(video_sections, float(self.min_time.get()), float(self.margin_time.get()))
+            video_sections = videdi_util.arrange_sections(video_sections, float(self.min_time.get()),
+                                                          float(self.margin_time.get()))
             video_sections = videdi_util.all_sections(video_sections, video)
             self.log_frame.set_log(video + 'の音声認識のために動画をカットします')
             shutil.copyfile(video, '.tmp/' + video)

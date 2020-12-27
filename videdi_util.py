@@ -126,7 +126,7 @@ def arrange_sections(sections, min_time, margin_time):
     if new_sections[0][0] < 0:
         new_sections[0][0] = 0.0
     for i in range(len(new_sections) - 1):
-        if new_sections[i + 1][0] < new_sections[i][1]:
+        if new_sections[i + 1][0] - new_sections[i][1] < 0.5:
             new_sections[i + 1][0] = (new_sections[i + 1][0] + new_sections[i][1]) / 2
             new_sections[i][1] = new_sections[i + 1][0]
     for i in range(len(new_sections)):
