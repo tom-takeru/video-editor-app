@@ -4,6 +4,7 @@ import time
 import threading
 import subprocess
 import simpleaudio
+import shutil
 from imageio.plugins.ffmpeg import FfmpegFormat
 import imageio
 from PIL import ImageTk, Image
@@ -22,12 +23,14 @@ class Audio_player():
 
     def __del__(self):
         try:
-            os.remove(self.audio)
+            shutil.rmtree(self.tmp_dir)
         except:
             pass
 
     def openfile(self, file_path):
-        self.audio = file_path.split('.')[0] + '.wav'
+        self.tmp_dir = os.path.split(file_path)[0] + '/.tmp'
+        os.mkdir(self.tmp_dir)
+        self.audio = self.tmp_dir + '/' + os.path.splitext(os.path.split(file_path)[1])[0] + '.wav'
         if os.path.exists(self.audio):
             os.remove(self.audio)
         try:
@@ -44,6 +47,7 @@ class Audio_player():
     def stop(self):
         try:
             self.play_obj.stop()
+            self.__del__()
         except:
             pass
 
