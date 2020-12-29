@@ -16,6 +16,8 @@ def search_videos(search_dir):
     files = os.listdir(search_dir)
     # フォルダ内の動画ファイル名を取得
     files = [i for i in files if i[-4:].lower() == '.mov' or i[-4:].lower() == '.mp4']
+    # ファイル名を絶対パスにする
+    files = [search_dir + i for i in files]
     # 動画ファイル名を名前順で返す
     return sorted(files)
 
@@ -28,13 +30,13 @@ def check_path(path):
         if path[-1] != os.sep:
             file_path = os.path.splitext(path)
             while True:
-                if not (os.path.exists(file_path[0] + str(i) + file_path[1])):
-                    return file_path[0] + str(i) + file_path[1]
+                if not (os.path.exists(file_path[0] + '(' + str(i) + ')' + file_path[1])):
+                    return file_path[0] + '(' + str(i) + ')' + file_path[1]
                 i += 1
         else:
             while True:
-                if not (os.path.exists(os.path.dirname(path) + str(i))):
-                    return os.path.dirname(path) + str(i)
+                if not (os.path.exists(os.path.dirname(path) + '(' + str(i) + ')/')):
+                    return os.path.dirname(path) + '(' + str(i) + ')/'
                 i += 1
     else:
         return path
@@ -152,7 +154,7 @@ def all_sections(sections, video):
 
 
 # srtファイル作成
-def make_srt(video_dir, video, text_path, text_list, subtitle_sections):
+def make_srt(output_file, text_list, subtitle_sections):
     def time_for_srt(time):
         result = []
         hours = int(time / 3600)
@@ -167,46 +169,43 @@ def make_srt(video_dir, video, text_path, text_list, subtitle_sections):
         microseconds = round(time * 1000)
         result += str(microseconds).zfill(3)
         return ''.join(result)
-    with open(video_dir + '/' + video.split('.')[0] + '_subtitle.srt', mode='w', encoding='utf8') as wf:
+    with open(output_file, mode='w', encoding='utf8') as wf:
         for i, text in enumerate(text_list):
             wf.write(str(i + 1) + '\n')
-            sec_num = i
             time_info = time_for_srt(
-                subtitle_sections[sec_num][0]) + ' --> ' + time_for_srt(subtitle_sections[sec_num][1])
+                subtitle_sections[i][0]) + ' --> ' + time_for_srt(subtitle_sections[i][1])
             wf.write(time_info + '\n')
-            with open(text_path + '/' + text, mode='r', encoding='utf8') as rf:
+            with open(text, mode='r', encoding='utf8') as rf:
                 wf.write(rf.read() + '\n\n')
-    return
+    return output_file
 
 
 # 動画の字幕焼き付け
-def print_subtitle(video_dir, video, srt_path):
+def print_subtitle(video, srt_file, output_file):
     try:
-        new_file_path = check_path(video_dir + '/' + video.split('.')[0] + '_subtitle.mp4')
-        command = [FFMPEG_PATH, '-i', video_dir + '/' + video, '-vf',
-                   'subtitles=' + srt_path + '/' + video.split('.')[0] + r"_subtitle.srt:force_style='FontSize=10'",
-                   new_file_path]
-        subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        command = [FFMPEG_PATH, '-i', video, '-vf',
+                   'subtitles=' + srt_file + ":force_style='FontSize=10'",
+                   output_file]
+        output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except Exception as e:
         print('error:print_subtitle method')
         print(e)
         return
-    return video_dir + '/' + video.split('.')[0] + '_subtitle.mp4'
+    return output_file
 
 
 # 動画の結合
-def combine_video(video_dir, output_name):
+def combine_video(video_dir, output_file):
     video_list = search_videos(video_dir)
     try:
-        with open(video_dir + '/combine.txt', mode='w', encoding='utf8') as wf:
+        with open(video_dir + 'combine.txt', mode='w', encoding='utf8') as wf:
             for i, video in enumerate(video_list):
-                wf.write('file ' + video_dir + '/' + video + '\n')
-        output_name = check_path(output_name)
-        command = [FFMPEG_PATH, '-f', 'concat', '-safe', '0', '-i', video_dir + '/combine.txt',
-                   '-c', 'copy', output_name]
+                wf.write('file ' + video + '\n')
+        command = [FFMPEG_PATH, '-f', 'concat', '-safe', '0', '-i', video_dir + 'combine.txt',
+                   '-c', 'copy', output_file]
         subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        os.remove(video_dir + '/combine.txt')
+        os.remove(video_dir + 'combine.txt')
     except Exception as e:
         print('error:combine_video method')
         print(e)
-    return
+    return output_file
