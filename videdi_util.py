@@ -124,7 +124,7 @@ def arrange_sections(sections, min_time, margin_time):
         if (sections[i][1] - sections[i][0]) < min_time:
             continue
         else:
-            new_sections.append([sections[i][0] - margin_time, sections[i][1] + margin_time, True])
+            new_sections.append([sections[i][0] - margin_time, sections[i][1] + margin_time, False])
     if new_sections[0][0] < 0:
         new_sections[0][0] = 0.0
     for i in range(len(new_sections) - 1):
@@ -132,7 +132,7 @@ def arrange_sections(sections, min_time, margin_time):
             new_sections[i + 1][0] = (new_sections[i + 1][0] + new_sections[i][1]) / 2
             new_sections[i][1] = new_sections[i + 1][0]
     for i in range(len(new_sections)):
-        new_sections[i][2] = True
+        new_sections[i][2] = False
     return new_sections
 
 
@@ -140,16 +140,16 @@ def arrange_sections(sections, min_time, margin_time):
 def all_sections(sections, video):
     new_sections = []
     if sections[0][0] > 0.5:
-        new_sections.append([float(0.0), sections[0][0], False])
+        new_sections.append([float(0.0), sections[0][0], True])
     for i in range(len(sections)-1):
         new_sections.append(sections[i])
         if sections[i][1] == sections[i+1][0]:
             continue
-        new_sections.append([sections[i][1], sections[i+1][0], False])
+        new_sections.append([sections[i][1], sections[i+1][0], True])
     new_sections.append(sections[-1])
     duration = get_video_duration(video)
     if duration - sections[-1][1] > 0.5:
-        new_sections.append([sections[-1][1], duration, False])
+        new_sections.append([sections[-1][1], duration, True])
     return new_sections
 
 

@@ -160,6 +160,9 @@ class Videdi:
         self.thread_event = None
         self.next_action = ''
         self.decided = False
+        self.player = video_audio_player.Video_Audio_player()
+        self.cut_bln = tk.BooleanVar()
+
         # メインループでイベント待ち
         if __name__ == '__main__':
             self.root.mainloop()
@@ -316,8 +319,6 @@ class Videdi:
     def jumpcut(self):
         # ジャンプカット開始
         self.log_frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画をジャンプカットします')
-        os.chdir(self.process_dir)
-        video_dir = self.process_dir
         video_list = videdi_util.search_videos(self.process_dir)
         for i, video in enumerate(video_list):
             video_name = os.path.split(video)[1]
@@ -331,7 +332,7 @@ class Videdi:
             video_sections = videdi_util.arrange_sections(video_sections, float(self.min_time.get()),
                                                           float(self.margin_time.get()))
             video_sections = videdi_util.all_sections(video_sections, video)
-            jumpcut_dir, _ = self.cut_video(video_dir, video_sections, video)
+            jumpcut_dir, _ = self.cut_video(self.process_dir, video_sections, video)
             new_video = videdi_util.check_path(os.path.splitext(video)[0] + '_jumpcut.mp4')
             videdi_util.combine_video(jumpcut_dir, new_video)
             self.log_frame.set_log(video_name + 'をジャンプカットしました')
@@ -346,7 +347,6 @@ class Videdi:
         video_name = os.path.split(video)[1]
         jumpcut_dir = videdi_util.check_path(video_dir + '.tmp_' + os.path.splitext(video_name)[0] + '_jumpcut/')
         os.mkdir(jumpcut_dir)
-        cut_or_not = []
         # sectionsにしたがって動画をカット
         for i in range(len(sections)):
             split_file = jumpcut_dir + '/' + os.path.splitext(video_name)[0] + '_' + format(i+1, '0>' + str(digit)) + \
@@ -354,45 +354,13 @@ class Videdi:
             command = [FFMPEG_PATH, '-i', video, '-ss', str(sections[i][0]), '-t',
                        str(sections[i][1] - sections[i][0]), split_file]
             subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            cut_or_not.append(not sections[i][2])
             # 進捗をパーセントで表示
             self.log_frame.set_progress_log('カット処理', i + 1, len(sections))
         self.log_frame.set_log('カット処理完了')
         if self.jumpcut_fix_bln.get():
-
-            def end_process():
-                player.stop()
-                cut_or_not[current_video_scale_var-1] = cut_bln.get()
-                fix_window.video_scale.configure(state='disable')
-                fix_window.preview_button.configure(state='disable')
-                fix_window.back_button.configure(state='disable')
-                fix_window.go_button.configure(state='disable')
-                fix_window.cut_chk.configure(state='disable')
-                fix_window.finish_button.configure(state='disable')
-                self.thread_event.set()
-                return
-
-            def preview():
-                self.next_action = 'preview'
-                end_process()
-                return
-
-            def back():
-                self.next_action = 'back'
-                end_process()
-                return
-
-            def go():
-                self.next_action = 'go'
-                end_process()
-                return
-
-            def finish():
-                self.next_action = 'finish'
-                end_process()
-                return
+            self.log_frame.set_log('ジャンプカットを修正します')
             fix_window = tk.Toplevel()
-            fix_window.geometry(str(WINDOW_WIDTH) + 'x' + str(WINDOW_HEIGHT) + '+' + str(self.window_width) + '+0')
+            fix_window.geometry(str(WINDOW_WIDTH) + 'x' + str(WINDOW_HEIGHT+100) + '+' + str(self.window_width) + '+0')
             fix_window.title('ジャンプカット修正')
             frame = tk.Frame(fix_window)
             frame.pack()
@@ -405,41 +373,43 @@ class Videdi:
                                               from_=1, to=len(sections))
             fix_window.video_scale.place(relx=0.04, rely=line1_rel_y, relwidth=0.92)
             # 再生ボタン
-            fix_window.preview_button = tk.Button(fix_window, text='▶︎', command=preview,
-                                             highlightbackground=self.button_background, fg='red', font=('', 30),
-                                             highlightthickness=0)
+            fix_window.preview_button = tk.Button(fix_window, text='▶︎', command=self.fix_win_preview,
+                                                  highlightbackground=self.button_background, fg='red', font=('', 30),
+                                                  highlightthickness=0)
             fix_window.preview_button.place(relx=0.39, rely=line2_rel_y, relwidth=button_relwidth,
-                                       height=button_height)
+                                            height=button_height)
             # 前へボタン
-            fix_window.back_button = tk.Button(fix_window, text='＜', command=back, font=('', 30),
-                                          highlightbackground=self.button_background, fg='black', highlightthickness=0)
+            fix_window.back_button = tk.Button(fix_window, text='＜', command=self.fix_win_back, font=('', 30),
+                                               highlightbackground=self.button_background, fg='black',
+                                               highlightthickness=0)
             fix_window.back_button.place(relx=0.33, rely=line2_rel_y, relwidth=button_relwidth, height=button_height)
             # 次へボタン
-            fix_window.go_button = tk.Button(fix_window, text='＞', command=go, font=('', 30),
-                                        highlightbackground=self.button_background, fg='black', highlightthickness=0)
-            fix_window.go_button.place(relx=0.45, rely=line2_rel_y, relwidth=button_relwidth,
-                                  height=button_height)
-            cut_bln = tk.BooleanVar()
-            fix_window.cut_chk = tk.Checkbutton(fix_window, variable=cut_bln, text='カットする')
+            fix_window.go_button = tk.Button(fix_window, text='＞', command=self.fix_win_go, font=('', 30),
+                                             highlightbackground=self.button_background, fg='black',
+                                             highlightthickness=0)
+            fix_window.go_button.place(relx=0.45, rely=line2_rel_y, relwidth=button_relwidth, height=button_height)
+            fix_window.cut_chk = tk.Checkbutton(fix_window, variable=self.cut_bln, text='カットする')
             fix_window.cut_chk.place(relx=0.62, rely=line2_rel_y)
             # 完了ボタン
-            fix_window.finish_button = tk.Button(fix_window, text='完了', command=finish,
-                                            highlightbackground=self.button_background, fg='black',
-                                            highlightthickness=0)
+            fix_window.finish_button = tk.Button(fix_window, text='編集完了', command=self.fix_win_finish,
+                                                 highlightbackground=self.button_background, fg='black',
+                                                 highlightthickness=0)
             fix_window.finish_button.place(relx=0.85, rely=line2_rel_y, relwidth=0.1,
-                                      height=25)
-            fix_window.protocol("WM_DELETE_WINDOW", finish)
+                                           height=25)
+            fix_window.protocol("WM_DELETE_WINDOW", self.fix_win_finish)
+            fix_window.bind('<Key>', self.fix_win_keyboard)
+            fix_window.focus_set()
             current_video_scale_var = 1
             while True:
                 split_file = jumpcut_dir + '/' + os.path.splitext(video_name)[0] + '_' \
                              + format(current_video_scale_var, '0>' + str(digit)) + '.mp4'
                 # カットチェックボックス
-                cut_bln.set(cut_or_not[current_video_scale_var-1])
+                self.cut_bln.set(sections[current_video_scale_var - 1][2])
                 frame.video_label = tk.Label(fix_window)
                 frame.video_label.pack()
-                player = video_audio_player.Video_Audio_player()
                 # 動画を読み込む
-                player.openfile(split_file, frame.video_label)
+                self.player.__init__()
+                self.player.openfile(split_file, frame.video_label)
                 self.thread_event = threading.Event()
                 fix_window.preview_button.configure(state='normal')
                 fix_window.back_button.configure(state='normal')
@@ -448,8 +418,15 @@ class Videdi:
                 fix_window.finish_button.configure(state='normal')
                 fix_window.video_scale.configure(state='normal')
                 # 動画を再生する
-                player.play()
+                self.player.play()
                 self.thread_event.wait()
+                fix_window.video_scale.configure(state='disable')
+                fix_window.preview_button.configure(state='disable')
+                fix_window.back_button.configure(state='disable')
+                fix_window.go_button.configure(state='disable')
+                fix_window.cut_chk.configure(state='disable')
+                fix_window.finish_button.configure(state='disable')
+                sections[current_video_scale_var-1][2] = self.cut_bln.get()
                 frame.video_label.destroy()
                 current_video_scale_var = int(video_scale_var.get())
                 if self.next_action == 'preview':
@@ -470,7 +447,7 @@ class Videdi:
         for i in range(len(sections)):
             split_file = jumpcut_dir + '/' + os.path.splitext(video_name)[0] + '_' \
                          + format(i + 1, '0>' + str(digit)) + '.mp4'
-            if cut_or_not[i]:
+            if sections[i][2]:
                 os.remove(split_file)
             else:
                 os.rename(split_file,
@@ -515,7 +492,9 @@ class Videdi:
             os.mkdir(srt_dir)
             subtitle_dir = self.process_dir + '.tmp/.tmp_' + video_name.split('.')[0] + '_subtitle/'
             os.mkdir(subtitle_dir)
+            self.log_frame.set_log(video_name + 'の音声部分をテキスト化します')
             self.speech_recognize(jumpcut_video_list, text_dir)
+            self.log_frame.set_log(video_name + 'の字幕を動画に焼き付けます')
             for j in range(len(jumpcut_video_list)):
                 jumpcut_video_name = os.path.split(jumpcut_video_list[j])[1]
                 text_file = text_dir + os.path.splitext(jumpcut_video_name)[0] + '.txt'
@@ -527,90 +506,56 @@ class Videdi:
                                            + os.path.splitext(jumpcut_video_name)[0] + '_subtitle.mp4')
                 self.log_frame.set_progress_log('字幕付け', j + 1, len(jumpcut_video_list))
             if self.subtitle_fix_bln.get():
-
-                def end_process():
-                    player.stop()
-                    fix_window.back_button.configure(state='disable')
-                    fix_window.go_button.configure(state='disable')
-                    fix_window.preview_button.configure(state='disable')
-                    fix_window.finish_button.configure(state='disable')
-                    fix_window.subtitle_text_box.configure(state='disable')
-                    self.thread_event.set()
-                    return
-
-                def preview():
-                    self.next_action = 'preview'
-                    end_process()
-                    return
-
-                def back():
-                    self.next_action = 'back'
-                    end_process()
-                    return
-
-                def go():
-                    self.next_action = 'go'
-                    end_process()
-                    return
-
-                def finish():
-                    self.next_action = 'finish'
-                    end_process()
-                    return
-
                 fix_window = tk.Toplevel()
-                fix_window.geometry(str(WINDOW_WIDTH) + 'x' + str(WINDOW_HEIGHT) + '+' + str(self.window_width) + '+0')
+                fix_window.geometry(str(WINDOW_WIDTH) + 'x' + str(WINDOW_HEIGHT+100)
+                                    + '+' + str(self.window_width) + '+0')
                 fix_window.title('字幕修正')
                 frame = tk.Frame(fix_window)
                 frame.pack()
-                line1_rel_y = 0.82
-                line2_rel_y = 0.86
-                line3_rel_y = 0.9
+                line1_rel_y = 0.7
+                line2_rel_y = 0.76
+                line3_rel_y = 0.8
                 button_height = 25
-                button_relwidth = 0.1
-                fix_window.label = tk.Label(fix_window, font=("", 14))
-                fix_window.label.place(relx=0, rely=line1_rel_y, relwidth=1.0)
-                fix_window.subtitle_text_box = ScrolledText(fix_window, font=("", 15), height=3, width=52)
-                fix_window.subtitle_text_box.place(relx=0.01, rely=line2_rel_y)
-                fix_window.back_button = tk.Button(fix_window, text='前へ', command=back,
-                                              highlightbackground=self.button_background, fg='black',
-                                              highlightthickness=0)
-                fix_window.back_button.place(relx=0.79, rely=line2_rel_y, relwidth=button_relwidth,
-                                        height=button_height)
-                fix_window.go_button = tk.Button(fix_window, text='次へ', command=go,
-                                            highlightbackground=self.button_background, fg='black',
-                                            highlightthickness=0)
-                fix_window.go_button.place(relx=0.89, rely=line2_rel_y, relwidth=button_relwidth, height=button_height)
-                fix_window.preview_button = tk.Button(fix_window, text='プレビュー', command=preview,
+                button_relwidth = 0.06
+                video_scale_var = tk.DoubleVar()
+                fix_window.video_scale = tk.Scale(fix_window, variable=video_scale_var, orient=tk.HORIZONTAL,
+                                                  from_=1, to=len(jumpcut_video_list))
+                fix_window.video_scale.place(relx=0.04, rely=line1_rel_y, relwidth=0.92)
+                # 再生ボタン
+                fix_window.preview_button = tk.Button(fix_window, text='▶︎', command=self.fix_win_preview,
+                                                      highlightbackground=self.button_background, fg='red',
+                                                      font=('', 30),
+                                                      highlightthickness=0)
+                fix_window.preview_button.place(relx=0.47, rely=line2_rel_y, relwidth=button_relwidth,
+                                                height=button_height)
+                # 前へボタン
+                fix_window.back_button = tk.Button(fix_window, text='＜', command=self.fix_win_back, font=('', 30),
+                                                   highlightbackground=self.button_background, fg='black',
+                                                   highlightthickness=0)
+                fix_window.back_button.place(relx=0.39, rely=line2_rel_y, relwidth=button_relwidth,
+                                             height=button_height)
+                # 次へボタン
+                fix_window.go_button = tk.Button(fix_window, text='＞', command=self.fix_win_go, font=('', 30),
                                                  highlightbackground=self.button_background, fg='black',
                                                  highlightthickness=0)
-                fix_window.preview_button.place(relx=0.79, rely=line3_rel_y, relwidth=button_relwidth, height=button_height)
-                fix_window.finish_button = tk.Button(fix_window, text='完了', command=finish,
-                                                highlightbackground=self.button_background, fg='black',
-                                                highlightthickness=0)
-                fix_window.finish_button.place(relx=0.89, rely=line3_rel_y, relwidth=button_relwidth, height=button_height)
-                fix_window.protocol("WM_DELETE_WINDOW", finish)
-                jumpcut_video_num = 0
+                fix_window.go_button.place(relx=0.55, rely=line2_rel_y, relwidth=button_relwidth,
+                                           height=button_height)
+                fix_window.subtitle_text_box = ScrolledText(fix_window, font=("", 15), height=5, width=59)
+                fix_window.subtitle_text_box.place(relx=0.01, rely=line3_rel_y)
+                fix_window.finish_button = tk.Button(fix_window, text='編集完了', command=self.fix_win_finish,
+                                                     highlightbackground=self.button_background, fg='black',
+                                                     highlightthickness=0)
+                fix_window.finish_button.place(relx=0.89, rely=line3_rel_y, relwidth=0.1, height=button_height)
+                fix_window.protocol("WM_DELETE_WINDOW", self.fix_win_finish)
+                current_video_scale_var = 1
                 while True:
                     frame.video_label = tk.Label(fix_window)
                     frame.video_label.pack()
-                    fix_window.back_button.configure(state='normal')
-                    fix_window.go_button.configure(state='normal')
-                    fix_window.preview_button.configure(state='normal')
-                    fix_window.finish_button.configure(state='normal')
-                    fix_window.subtitle_text_box.configure(state='normal')
                     self.thread_event = threading.Event()
-                    jumpcut_video = jumpcut_video_list[jumpcut_video_num]
+                    jumpcut_video = jumpcut_video_list[current_video_scale_var-1]
                     jumpcut_video_name = os.path.split(jumpcut_video)[1]
                     subtitle_video = subtitle_dir + os.path.splitext(jumpcut_video_name)[0] + '_subtitle.mp4'
                     text_file = text_dir + os.path.splitext(jumpcut_video_name)[0] + '.txt'
-                    text = ''
-                    for k in range(51):
-                        if int(jumpcut_video_num * 50 / (len(jumpcut_video_list) - 1)) == k:
-                            text += '○'
-                        else:
-                            text += '・'
-                    fix_window.label.configure(text=text)
                     current_subtitle_text = ''
                     try:
                         with open(text_file, mode='r', encoding='utf8') as rf:
@@ -618,36 +563,49 @@ class Videdi:
                     except Exception as e:
                         print('error:play_video_for_subtitle')
                         print(e)
+                    fix_window.subtitle_text_box.configure(state='normal')
                     fix_window.subtitle_text_box.delete('1.0', 'end')
-                    fix_window.subtitle_text_box.insert(tk.INSERT, current_subtitle_text)
-                    player = video_audio_player.Video_Audio_player()
-                    player.openfile(subtitle_video, frame.video_label)
-                    player.play()
+                    fix_window.subtitle_text_box.insert('1.0', current_subtitle_text)
+                    self.player.__init__()
+                    self.player.openfile(subtitle_video, frame.video_label)
+                    fix_window.back_button.configure(state='normal')
+                    fix_window.go_button.configure(state='normal')
+                    fix_window.preview_button.configure(state='normal')
+                    fix_window.finish_button.configure(state='normal')
+                    self.player.play()
                     self.thread_event.wait()
+                    fix_window.back_button.configure(state='disable')
+                    fix_window.go_button.configure(state='disable')
+                    fix_window.preview_button.configure(state='disable')
+                    fix_window.finish_button.configure(state='disable')
+                    fix_window.subtitle_text_box.configure(state='disable')
                     new_subtitle_text = fix_window.subtitle_text_box.get('1.0', 'end -1c')
                     if not (new_subtitle_text == current_subtitle_text):
                         with open(text_file, mode='w', encoding='utf8') as wf:
                             wf.write(new_subtitle_text)
                         srt_file = videdi_util.make_srt(srt_dir + os.path.splitext(jumpcut_video_name)[0] + '.srt',
                                                         [text_file, ],
-                                                        [[0.0, video_sections[jumpcut_video_num][1]
-                                                          - video_sections[jumpcut_video_num][0]], ])
+                                                        [[0.0, video_sections[current_video_scale_var-1][1]
+                                                          - video_sections[current_video_scale_var-1][0]], ])
                         os.remove(subtitle_video)
                         videdi_util.print_subtitle(jumpcut_video, srt_file,
                                                    subtitle_dir + os.path.splitext(jumpcut_video_name)[0]
                                                    + '_subtitle.mp4')
                     frame.video_label.destroy()
+                    current_video_scale_var = int(video_scale_var.get())
                     if self.next_action == 'finish':
                         fix_window.destroy()
                         break
                     elif self.next_action == 'preview':
                         continue
                     elif self.next_action == 'back':
-                        if jumpcut_video_num != 0:
-                            jumpcut_video_num -= 1
+                        if current_video_scale_var != 1:
+                            current_video_scale_var -= 1
+                            video_scale_var.set(current_video_scale_var)
                     elif self.next_action == 'go':
-                        if jumpcut_video_num != len(jumpcut_video_list) - 1:
-                            jumpcut_video_num += 1
+                        if current_video_scale_var != len(jumpcut_video_list):
+                            current_video_scale_var += 1
+                            video_scale_var.set(current_video_scale_var)
                 # フォルダ名を変更
                 new_srt_dir = self.process_dir + '.tmp/' + os.path.splitext(video_name)[0] + '_srt/'
                 os.rename(srt_dir, new_srt_dir)
@@ -707,10 +665,10 @@ class Videdi:
                     for string in string_sections:
                         s += string
             except sr.UnknownValueError:
-                # 何を言っているのかわからなかった場合の処理
+                # 何を言っているのかわからなかった場合は空の文字列にする
                 s = ''
             except sr.RequestError:
-                # レスポンスが返ってこなかった場合の処理
+                # レスポンスが返ってこなかった場合は全て空の文字列にする
                 for j in range(i, len(video_list)):
                     video_name = os.path.split(video_list[j])[1]
                     text_file = os.path.splitext(video_name)[0] + '.txt'
@@ -726,6 +684,48 @@ class Videdi:
             shutil.rmtree(text_dir + '.tmp/')
         except OSError:
             pass
+        return
+
+    def fix_win_end_process(self):
+        self.player.stop()
+        self.thread_event.set()
+        return
+
+    def fix_win_preview(self):
+        self.next_action = 'preview'
+        self.fix_win_end_process()
+        return
+
+    def fix_win_back(self):
+        self.next_action = 'back'
+        self.fix_win_end_process()
+        return
+
+    def fix_win_go(self):
+        self.next_action = 'go'
+        self.fix_win_end_process()
+        return
+
+    def fix_win_finish(self):
+        self.next_action = 'finish'
+        self.fix_win_end_process()
+        return
+
+    def fix_win_keyboard(self, event):
+        pressed_key = str(event.char)
+        # self.log_frame.set_log("pressed" + repr(event.char))
+        if pressed_key == ' ':
+            self.fix_win_preview()
+        elif pressed_key == '\uf703':
+            self.fix_win_go()
+        elif pressed_key == '\uf702':
+            self.fix_win_back()
+        elif pressed_key == '\uf700':
+            self.cut_bln.set(True)
+        elif pressed_key == '\uf701':
+            self.cut_bln.set(False)
+        elif pressed_key == '\r':
+            self.fix_win_finish()
         return
 
 
