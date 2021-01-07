@@ -32,12 +32,12 @@ WINDOW_WIDTH = 700
 WINDOW_HEIGHT = 600
 
 
-class Videdi:
+class Auto_editor:
     def __init__(self, width=WINDOW_WIDTH, height=WINDOW_HEIGHT):
         # TKクラスをインスタンス化
         self.root = tk.Tk()
         # ウィンドウのタイトルを設定
-        self.root.title('VIDEDI')
+        self.root.title('AUTO EDITOR')
         # ウィンドウの大きさを設定
         self.window_width = width
         self.window_height = height
@@ -64,7 +64,7 @@ class Videdi:
         pos_y = 0
         self.title_height = 100
         title_font = font.Font(self.root, family='impact', size=self.title_height, weight='bold')
-        self.title_lab = tk.Label(text='VIDEDI', font=title_font, foreground='lightgray', bg='black')
+        self.title_lab = tk.Label(text='AUTO EDITOR', font=title_font, foreground='lightgray', bg='black')
         self.title_lab.place(x=0, y=pos_y, relwidth=1.0, height=self.title_height)
         # 現在選択中フォルダラベル
         pos_y += self.title_height + 15
@@ -265,7 +265,6 @@ class Videdi:
         # オプションを非表示にする
         self.jumpcut_fix_chk.place_forget()
         self.subtitle_fix_chk.place_forget()
-        process = self.current_process.get()
         # 動画が入ったフォルダが選択されていたら、ウィジェットを有効化する
         chk_state = 'disable'
         spinbox_state = 'disable'
@@ -287,6 +286,7 @@ class Videdi:
         self.margin_time_lab.configure(foreground=text_color)
         self.margin_time_spinbox.configure(state=spinbox_state)
         self.margin_time_unit_lab.configure(foreground=text_color)
+        process = self.current_process.get()
         # 処理ごとにオプションの表示をセット
         if process == 'ジャンプカット':
             self.jumpcut_fix_chk.place(relx=0.2, y=self.option_pos_y)
@@ -308,7 +308,7 @@ class Videdi:
         if process == 'ジャンプカット':
             thread = threading.Thread(target=self.jumpcut)
         elif process == 'ジャンプカットして字幕を付ける':
-            thread = threading.Thread(target=self.jumpcut_and_add_subtitle)
+            thread = threading.Thread(target=self.jumpcut_and_add_subtitle2)
         else:
             self.log_frame.set_log('error:run_button method')
             return
@@ -349,8 +349,7 @@ class Videdi:
         os.mkdir(jumpcut_dir)
         # sectionsにしたがって動画をカット
         for i in range(len(sections)):
-            split_file = jumpcut_dir + '/' + os.path.splitext(video_name)[0] + '_' + format(i+1, '0>' + str(digit)) + \
-                         '.mp4'
+            split_file = jumpcut_dir + os.path.splitext(video_name)[0] + '_' + format(i+1, '0>' + str(digit)) + '.mp4'
             command = [FFMPEG_PATH, '-i', video, '-ss', str(sections[i][0]), '-t',
                        str(sections[i][1] - sections[i][0]), split_file]
             subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -445,13 +444,11 @@ class Videdi:
         video_num = 1
         new_sections = []
         for i in range(len(sections)):
-            split_file = jumpcut_dir + '/' + os.path.splitext(video_name)[0] + '_' \
-                         + format(i + 1, '0>' + str(digit)) + '.mp4'
+            split_file = jumpcut_dir + os.path.splitext(video_name)[0] + '_' + format(i + 1, '0>' + str(digit)) + '.mp4'
             if sections[i][2]:
                 os.remove(split_file)
             else:
-                os.rename(split_file,
-                          jumpcut_dir + '/' + os.path.splitext(video_name)[0] + '_'
+                os.rename(split_file, jumpcut_dir + '/' + os.path.splitext(video_name)[0] + '_'
                           + format(video_num, '0>' + str(digit)) + '.mp4')
                 video_num += 1
                 new_sections.append(sections[i])
@@ -496,14 +493,14 @@ class Videdi:
             self.speech_recognize(jumpcut_video_list, text_dir)
             self.log_frame.set_log(video_name + 'の字幕を動画に焼き付けます')
             for j in range(len(jumpcut_video_list)):
-                jumpcut_video_name = os.path.split(jumpcut_video_list[j])[1]
-                text_file = text_dir + os.path.splitext(jumpcut_video_name)[0] + '.txt'
-                srt_file = videdi_util.make_srt(srt_dir + os.path.splitext(jumpcut_video_name)[0] + '.srt',
+                jumpcut_video_file = os.path.split(jumpcut_video_list[j])[1]
+                text_file = text_dir + os.path.splitext(jumpcut_video_file)[0] + '.txt'
+                srt_file = videdi_util.make_srt(srt_dir + os.path.splitext(jumpcut_video_file)[0] + '.srt',
                                                 [text_file, ],
                                                 [[0.0, video_sections[j][1]
                                                   - video_sections[j][0]], ])
                 videdi_util.print_subtitle(jumpcut_video_list[j], srt_file, subtitle_dir
-                                           + os.path.splitext(jumpcut_video_name)[0] + '_subtitle.mp4')
+                                           + os.path.splitext(jumpcut_video_file)[0] + '_subtitle.mp4')
                 self.log_frame.set_progress_log('字幕付け', j + 1, len(jumpcut_video_list))
             if self.subtitle_fix_bln.get():
                 fix_window = tk.Toplevel()
@@ -553,9 +550,9 @@ class Videdi:
                     frame.video_label.pack()
                     self.thread_event = threading.Event()
                     jumpcut_video = jumpcut_video_list[current_video_scale_var-1]
-                    jumpcut_video_name = os.path.split(jumpcut_video)[1]
-                    subtitle_video = subtitle_dir + os.path.splitext(jumpcut_video_name)[0] + '_subtitle.mp4'
-                    text_file = text_dir + os.path.splitext(jumpcut_video_name)[0] + '.txt'
+                    jumpcut_video_file = os.path.split(jumpcut_video)[1]
+                    subtitle_video = subtitle_dir + os.path.splitext(jumpcut_video_file)[0] + '_subtitle.mp4'
+                    text_file = text_dir + os.path.splitext(jumpcut_video_file)[0] + '.txt'
                     current_subtitle_text = ''
                     try:
                         with open(text_file, mode='r', encoding='utf8') as rf:
@@ -583,13 +580,13 @@ class Videdi:
                     if not (new_subtitle_text == current_subtitle_text):
                         with open(text_file, mode='w', encoding='utf8') as wf:
                             wf.write(new_subtitle_text)
-                        srt_file = videdi_util.make_srt(srt_dir + os.path.splitext(jumpcut_video_name)[0] + '.srt',
+                        srt_file = videdi_util.make_srt(srt_dir + os.path.splitext(jumpcut_video_file)[0] + '.srt',
                                                         [text_file, ],
                                                         [[0.0, video_sections[current_video_scale_var-1][1]
                                                           - video_sections[current_video_scale_var-1][0]], ])
                         os.remove(subtitle_video)
                         videdi_util.print_subtitle(jumpcut_video, srt_file,
-                                                   subtitle_dir + os.path.splitext(jumpcut_video_name)[0]
+                                                   subtitle_dir + os.path.splitext(jumpcut_video_file)[0]
                                                    + '_subtitle.mp4')
                     frame.video_label.destroy()
                     current_video_scale_var = int(video_scale_var.get())
@@ -625,6 +622,210 @@ class Videdi:
         # 音声テキスト作成完了ログ
         self.log_frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画をジャンプカットして字幕を付けました')
         return
+
+    # ジャンプカットして字幕を付ける処理
+    def jumpcut_and_add_subtitle2(self):
+        # 音声テキスト作成開始ログ
+        self.log_frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画をジャンプカットして字幕を付けます')
+        video_list = videdi_util.search_videos(self.process_dir)
+        try:
+            shutil.rmtree(self.process_dir + '.tmp/')
+        except OSError:
+            pass
+        os.mkdir(self.process_dir + '.tmp/')
+        for i, video in enumerate(video_list):
+            video_name = os.path.split(video)[1]
+            self.log_frame.set_log(video_name + 'をカットして字幕を付けます ' + str(i+1) + '/' + str(len(video_list)))
+            self.log_frame.set_log(video_name + 'の無音部分を検知します')
+            cut_sections = videdi_util.silence_sections(video)
+            if len(cut_sections) == 0:
+                self.log_frame.set_log('無音部分がありませんでした')
+                continue
+            video_sections = videdi_util.video_sections(cut_sections, video)
+            video_sections = videdi_util.arrange_sections(video_sections, float(self.min_time.get()),
+                                                          float(self.margin_time.get()))
+            video_sections = videdi_util.all_sections(video_sections, video)
+            self.log_frame.set_log(video_name + 'の音声認識のために動画をカットします')
+            # jumpcut_dir, video_sections = self.cut_video(self.process_dir + '.tmp/', video_sections, video)
+            jumpcut_dir = self.process_dir + '.tmp/.tmp_' + os.path.splitext(video_name)[0] + '_jumpcut/'
+            os.mkdir(jumpcut_dir)
+            text_dir = self.process_dir + '.tmp/.tmp_' + video_name.split('.')[0] + '_text/'
+            os.mkdir(text_dir)
+            srt_dir = self.process_dir + '.tmp/.tmp_' + video_name.split('.')[0] + '_srt/'
+            os.mkdir(srt_dir)
+            subtitle_dir = self.process_dir + '.tmp/.tmp_' + video_name.split('.')[0] + '_subtitle/'
+            os.mkdir(subtitle_dir)
+            self.devide_video_into_sections(video, video_sections, jumpcut_dir)
+            jumpcut_video_list = videdi_util.search_videos(jumpcut_dir)
+            digit = len(str(len(jumpcut_video_list)))
+            self.log_frame.set_log(video_name + 'の音声部分をテキスト化します')
+            self.speech_recognize(jumpcut_video_list, text_dir)
+            self.log_frame.set_log(video_name + 'の字幕を動画に焼き付けます')
+            for j in range(len(jumpcut_video_list)):
+                jumpcut_video_file = os.path.split(jumpcut_video_list[j])[1]
+                text_file = text_dir + os.path.splitext(jumpcut_video_file)[0] + '.txt'
+                srt_file = videdi_util.make_srt(srt_dir + os.path.splitext(jumpcut_video_file)[0] + '.srt',
+                                                [text_file, ],
+                                                [[0.0, video_sections[j][1]
+                                                  - video_sections[j][0]], ])
+                videdi_util.print_subtitle(jumpcut_video_list[j], srt_file, subtitle_dir
+                                           + os.path.splitext(jumpcut_video_file)[0] + '_subtitle.mp4')
+                self.log_frame.set_progress_log('字幕付け', j + 1, len(jumpcut_video_list))
+            if self.subtitle_fix_bln.get():
+                fix_window = tk.Toplevel()
+                fix_window.geometry(str(WINDOW_WIDTH) + 'x' + str(WINDOW_HEIGHT+100)
+                                    + '+' + str(self.window_width) + '+0')
+                fix_window.title('字幕修正')
+                frame = tk.Frame(fix_window)
+                frame.pack()
+                line1_rel_y = 0.7
+                line2_rel_y = 0.76
+                line3_rel_y = 0.8
+                button_height = 25
+                button_relwidth = 0.06
+                video_scale_var = tk.DoubleVar()
+                fix_window.video_scale = tk.Scale(fix_window, variable=video_scale_var, orient=tk.HORIZONTAL,
+                                                  from_=1, to=len(jumpcut_video_list))
+                fix_window.video_scale.place(relx=0.04, rely=line1_rel_y, relwidth=0.92)
+                # 再生ボタン
+                fix_window.preview_button = tk.Button(fix_window, text='▶︎', command=self.fix_win_preview,
+                                                      highlightbackground=self.button_background, fg='red',
+                                                      font=('', 30),
+                                                      highlightthickness=0)
+                fix_window.preview_button.place(relx=0.47, rely=line2_rel_y, relwidth=button_relwidth,
+                                                height=button_height)
+                # 前へボタン
+                fix_window.back_button = tk.Button(fix_window, text='＜', command=self.fix_win_back, font=('', 30),
+                                                   highlightbackground=self.button_background, fg='black',
+                                                   highlightthickness=0)
+                fix_window.back_button.place(relx=0.39, rely=line2_rel_y, relwidth=button_relwidth,
+                                             height=button_height)
+                # 次へボタン
+                fix_window.go_button = tk.Button(fix_window, text='＞', command=self.fix_win_go, font=('', 30),
+                                                 highlightbackground=self.button_background, fg='black',
+                                                 highlightthickness=0)
+                fix_window.go_button.place(relx=0.55, rely=line2_rel_y, relwidth=button_relwidth,
+                                           height=button_height)
+                fix_window.cut_chk = tk.Checkbutton(fix_window, variable=self.cut_bln, text='カットする')
+                fix_window.cut_chk.place(relx=0.62, rely=line2_rel_y)
+                fix_window.subtitle_text_box = ScrolledText(fix_window, font=("", 15), height=5, width=59)
+                fix_window.subtitle_text_box.place(relx=0.01, rely=line3_rel_y)
+                fix_window.finish_button = tk.Button(fix_window, text='編集完了', command=self.fix_win_finish,
+                                                     highlightbackground=self.button_background, fg='black',
+                                                     highlightthickness=0)
+                fix_window.finish_button.place(relx=0.89, rely=line3_rel_y, relwidth=0.1, height=button_height)
+                fix_window.protocol("WM_DELETE_WINDOW", self.fix_win_finish)
+                current_video_scale_var = 1
+                while True:
+                    frame.video_label = tk.Label(fix_window)
+                    frame.video_label.pack()
+                    self.thread_event = threading.Event()
+                    jumpcut_video = jumpcut_video_list[current_video_scale_var-1]
+                    jumpcut_video_file = os.path.split(jumpcut_video)[1]
+                    subtitle_video = subtitle_dir + os.path.splitext(jumpcut_video_file)[0] + '_subtitle.mp4'
+                    text_file = text_dir + os.path.splitext(jumpcut_video_file)[0] + '.txt'
+                    current_subtitle_text = ''
+                    try:
+                        with open(text_file, mode='r', encoding='utf8') as rf:
+                            current_subtitle_text = rf.read()
+                    except Exception as e:
+                        print('error:play_video_for_subtitle')
+                        print(e)
+                    fix_window.subtitle_text_box.configure(state='normal')
+                    fix_window.subtitle_text_box.delete('1.0', 'end')
+                    fix_window.subtitle_text_box.insert('1.0', current_subtitle_text)
+                    self.cut_bln.set(video_sections[current_video_scale_var - 1][2])
+                    self.player.__init__()
+                    self.player.openfile(subtitle_video, frame.video_label)
+                    bind_id = fix_window.bind('<Key>', self.fix_win_keyboard)
+                    fix_window.back_button.configure(state='normal')
+                    fix_window.go_button.configure(state='normal')
+                    fix_window.preview_button.configure(state='normal')
+                    fix_window.finish_button.configure(state='normal')
+                    self.player.play()
+                    self.thread_event.wait()
+                    fix_window.unbind('<Key>', bind_id)
+                    fix_window.back_button.configure(state='disable')
+                    fix_window.go_button.configure(state='disable')
+                    fix_window.preview_button.configure(state='disable')
+                    fix_window.finish_button.configure(state='disable')
+                    fix_window.subtitle_text_box.configure(state='disable')
+                    new_subtitle_text = fix_window.subtitle_text_box.get('1.0', 'end -1c')
+                    if not (new_subtitle_text == current_subtitle_text):
+                        with open(text_file, mode='w', encoding='utf8') as wf:
+                            wf.write(new_subtitle_text)
+                        srt_file = videdi_util.make_srt(srt_dir + os.path.splitext(jumpcut_video_file)[0] + '.srt',
+                                                        [text_file, ],
+                                                        [[0.0, video_sections[current_video_scale_var-1][1]
+                                                          - video_sections[current_video_scale_var-1][0]], ])
+                        os.remove(subtitle_video)
+                        videdi_util.print_subtitle(jumpcut_video, srt_file,
+                                                   subtitle_dir + os.path.splitext(jumpcut_video_file)[0]
+                                                   + '_subtitle.mp4')
+                    video_sections[current_video_scale_var - 1][2] = self.cut_bln.get()
+                    frame.video_label.destroy()
+                    current_video_scale_var = int(video_scale_var.get())
+                    if self.next_action == 'finish':
+                        fix_window.destroy()
+                        break
+                    elif self.next_action == 'preview':
+                        continue
+                    elif self.next_action == 'back':
+                        if current_video_scale_var != 1:
+                            current_video_scale_var -= 1
+                            video_scale_var.set(current_video_scale_var)
+                    elif self.next_action == 'go':
+                        if current_video_scale_var != len(jumpcut_video_list):
+                            current_video_scale_var += 1
+                            video_scale_var.set(current_video_scale_var)
+            # フォルダ名を変更
+            new_text_dir = self.process_dir + '.tmp/' + os.path.splitext(video_name)[0] + '_text/'
+            os.rename(text_dir, new_text_dir)
+            text_dir = new_text_dir
+            new_srt_dir = self.process_dir + '.tmp/' + os.path.splitext(video_name)[0] + '_srt/'
+            os.rename(srt_dir, new_srt_dir)
+            srt_dir = new_srt_dir
+            new_jumpcut_dir = self.process_dir + '.tmp/' + os.path.splitext(video_name)[0] + '_jumpcut/'
+            os.rename(jumpcut_dir, new_jumpcut_dir)
+            jumpcut_dir = new_jumpcut_dir
+            new_subtitle_dir = self.process_dir + '.tmp/' + os.path.splitext(video_name)[0] + '_subtitle/'
+            os.rename(subtitle_dir, new_subtitle_dir)
+            subtitle_dir = new_subtitle_dir
+            subtitle_video_list = videdi_util.search_videos(subtitle_dir)
+            jumpcut_video_list = videdi_util.search_videos(jumpcut_dir)
+            video_num = 1
+            new_sections = []
+            for j in range(len(subtitle_video_list)):
+                text_file = text_dir + os.path.splitext(video_name)[0] + '_' + format(j+1, '0>' + str(digit)) + '.txt'
+                srt_file = srt_dir + os.path.splitext(video_name)[0] + '_' + format(j+1, '0>' + str(digit)) + '.srt'
+                if video_sections[j][2]:
+                    os.remove(text_file)
+                    os.remove(srt_file)
+                    os.remove(jumpcut_video_list[j])
+                    os.remove(subtitle_video_list[j])
+                else:
+                    os.rename(text_file, text_dir + os.path.splitext(video_name)[0] + '_' + format(video_num, '0>' + str(digit)) + '.txt')
+                    os.rename(srt_file, srt_dir + os.path.splitext(video_name)[0] + '_' + format(video_num, '0>' + str(digit)) + '.srt')
+                    os.rename(jumpcut_video_list[j],
+                              jumpcut_dir + os.path.splitext(video_name)[0] + '_' + format(video_num, '0>' + str(digit)) + '.mp4')
+                    os.rename(subtitle_video_list[j],
+                              subtitle_dir + os.path.splitext(video_name)[0] + '_' + format(video_num, '0>' + str(digit)) + '_subtitle.mp4')
+                    video_num += 1
+                    new_sections.append(video_sections[j])
+            # 動画を結合
+            jumpcut_subtitle_video = videdi_util.check_path(os.path.splitext(video)[0] + '_jumpcut_subtitle.mp4')
+            videdi_util.combine_video(subtitle_dir, jumpcut_subtitle_video)
+            self.log_frame.set_log(video_name + 'をジャンプカットして字幕を付けました')
+            new_text_dir = self.process_dir + '.tmp/' + os.path.splitext(video_name)[0] + '_text/'
+            os.rename(text_dir, new_text_dir)
+        # 一時的なフォルダを削除
+        # shutil.rmtree(self.process_dir + '.tmp/')
+        # ボタン有効化
+        self.enable_all_button()
+        # 音声テキスト作成完了ログ
+        self.log_frame.set_big_log(self.process_dir.split('/')[-2] + 'フォルダ内の動画をジャンプカットして字幕を付けました')
+        return
+
 
     # 音声認識処理
     def speech_recognize(self, video_list, text_dir):
@@ -686,6 +887,19 @@ class Videdi:
             pass
         return
 
+    def devide_video_into_sections(self, video, sections, output_dir):
+        digit = len(str(len(sections)))
+        video_name = os.path.split(video)[1]
+        # sectionsにしたがって動画をカット
+        for i in range(len(sections)):
+            split_file = output_dir + os.path.splitext(video_name)[0] + '_' + format(i+1, '0>' + str(digit)) + '.mp4'
+            command = [FFMPEG_PATH, '-i', video, '-ss', str(sections[i][0]), '-t',
+                       str(sections[i][1] - sections[i][0]), split_file]
+            subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # 進捗をパーセントで表示
+            self.log_frame.set_progress_log('カット処理', i + 1, len(sections))
+        return output_dir
+
     def fix_win_end_process(self):
         self.player.stop()
         self.thread_event.set()
@@ -724,13 +938,11 @@ class Videdi:
             self.cut_bln.set(True)
         elif pressed_key == '\uf701':
             self.cut_bln.set(False)
-        elif pressed_key == '\r':
-            self.fix_win_finish()
         return
 
 
 def main():
-    Videdi()
+    Auto_editor()
 
 
 if __name__ == '__main__':
