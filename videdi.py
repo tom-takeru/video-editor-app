@@ -32,7 +32,7 @@ WINDOW_WIDTH = 700
 WINDOW_HEIGHT = 600
 
 
-class Auto_editor:
+class AutoEditor:
     def __init__(self, width=WINDOW_WIDTH, height=WINDOW_HEIGHT):
         # TKクラスをインスタンス化
         self.root = tk.Tk()
@@ -50,6 +50,8 @@ class Auto_editor:
         # ウィンドウの大きさを指定
         self.root.geometry(str(self.window_width) + 'x' + str(self.window_height)
                            + '+' + str(self.window_pos_x) + '+' + str(self.window_pos_y))
+        # ウィンドウの大きさを固定
+        self.root.resizable(False, False)
         # ウィンドウの背景の色を設定
         window_bg = '#ececec'
         self.root.configure(bg=window_bg)
@@ -626,7 +628,7 @@ class Auto_editor:
     # ジャンプカットして字幕を付ける処理
     def jumpcut_and_add_subtitle2(self):
         # 音声テキスト作成開始ログ
-        self.log_frame.set_big_log(self.process_dir.split('/')[-1] + 'フォルダ内の動画をジャンプカットして字幕を付けます')
+        self.log_frame.set_big_log(self.process_dir.split('/')[-2] + 'フォルダ内の動画をジャンプカットして字幕を付けます')
         video_list = videdi_util.search_videos(self.process_dir)
         try:
             shutil.rmtree(self.process_dir + '.tmp/')
@@ -673,20 +675,26 @@ class Auto_editor:
                 self.log_frame.set_progress_log('字幕付け', j + 1, len(jumpcut_video_list))
             if self.subtitle_fix_bln.get():
                 fix_window = tk.Toplevel()
+                fix_window.configure(borderwidth=10, relief=tk.RIDGE)
                 fix_window.geometry(str(WINDOW_WIDTH) + 'x' + str(WINDOW_HEIGHT+100)
                                     + '+' + str(self.window_width) + '+0')
+                fix_window.resizable(False, False)
                 fix_window.title('字幕修正')
                 frame = tk.Frame(fix_window)
                 frame.pack()
-                line1_rel_y = 0.7
-                line2_rel_y = 0.76
-                line3_rel_y = 0.8
+                line1_rel_y = 0.72
+                line2_rel_y = 0.78
+                line3_rel_y = 0.82
+                last_line_rel_y = 0.96
+                scale_var_relx = 0.02
+                scale_var_relwidth = 0.96
                 button_height = 25
                 button_relwidth = 0.06
                 video_scale_var = tk.DoubleVar()
                 fix_window.video_scale = tk.Scale(fix_window, variable=video_scale_var, orient=tk.HORIZONTAL,
-                                                  from_=1, to=len(jumpcut_video_list))
-                fix_window.video_scale.place(relx=0.04, rely=line1_rel_y, relwidth=0.92)
+                                                  from_=1, to=len(jumpcut_video_list), activebackground='red', width=10,
+                                                  bd=0, cursor="sb_h_double_arrow")
+                fix_window.video_scale.place(relx=scale_var_relx, rely=line1_rel_y, relwidth=scale_var_relwidth)
                 # 再生ボタン
                 fix_window.preview_button = tk.Button(fix_window, text='▶︎', command=self.fix_win_preview,
                                                       highlightbackground=self.button_background, fg='red',
@@ -708,12 +716,13 @@ class Auto_editor:
                                            height=button_height)
                 fix_window.cut_chk = tk.Checkbutton(fix_window, variable=self.cut_bln, text='カットする')
                 fix_window.cut_chk.place(relx=0.62, rely=line2_rel_y)
-                fix_window.subtitle_text_box = ScrolledText(fix_window, font=("", 15), height=5, width=59)
+                fix_window.subtitle_text_box = ScrolledText(fix_window, font=("", 15), height=5, width=57)
                 fix_window.subtitle_text_box.place(relx=0.01, rely=line3_rel_y)
+                fix_window.subtitle_text_box.bind('<Leave>', lambda n: fix_window.focus_set())
                 fix_window.finish_button = tk.Button(fix_window, text='編集完了', command=self.fix_win_finish,
                                                      highlightbackground=self.button_background, fg='black',
                                                      highlightthickness=0)
-                fix_window.finish_button.place(relx=0.89, rely=line3_rel_y, relwidth=0.1, height=button_height)
+                fix_window.finish_button.place(relx=0.89, rely=last_line_rel_y, relwidth=0.1, height=button_height)
                 fix_window.protocol("WM_DELETE_WINDOW", self.fix_win_finish)
                 current_video_scale_var = 1
                 while True:
@@ -744,6 +753,7 @@ class Auto_editor:
                     fix_window.finish_button.configure(state='normal')
                     self.player.play()
                     self.thread_event.wait()
+                    fix_window.focus_set()
                     fix_window.unbind('<Key>', bind_id)
                     fix_window.back_button.configure(state='disable')
                     fix_window.go_button.configure(state='disable')
@@ -826,7 +836,6 @@ class Auto_editor:
         self.log_frame.set_big_log(self.process_dir.split('/')[-2] + 'フォルダ内の動画をジャンプカットして字幕を付けました')
         return
 
-
     # 音声認識処理
     def speech_recognize(self, video_list, text_dir):
         try:
@@ -877,9 +886,9 @@ class Auto_editor:
                         f.write('')
                 self.log_frame.set_log('インターネット接続がないため、音声を認識をスキップします')
                 break
-                # 進捗をパーセントで表示
             with open(text_dir + '/' + text_file, mode='w', encoding='utf8') as f:
                 f.write(s)
+            # 進捗をパーセントで表示
             self.log_frame.set_progress_log('音声テキスト化', i + 1, len(video_list))
         try:
             shutil.rmtree(text_dir + '.tmp/')
@@ -928,6 +937,8 @@ class Auto_editor:
     def fix_win_keyboard(self, event):
         pressed_key = str(event.char)
         # self.log_frame.set_log("pressed" + repr(event.char))
+        if str(event.widget) == '.!toplevel.!frame2':
+            return
         if pressed_key == ' ':
             self.fix_win_preview()
         elif pressed_key == '\uf703':
@@ -942,7 +953,7 @@ class Auto_editor:
 
 
 def main():
-    Auto_editor()
+    AutoEditor()
 
 
 if __name__ == '__main__':
