@@ -16,6 +16,7 @@ if APP_PATH == '':
     APP_PATH = '/Applications/videdi.app'
 FFMPEG_PATH = APP_PATH + '/Contents/MacOS/ffmpeg'
 
+
 # 音楽を再生する
 class Audio_player():
     def __init__(self):

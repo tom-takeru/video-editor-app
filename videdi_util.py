@@ -5,9 +5,11 @@ import sys
 APP_PATH = '/'.join(sys.argv[0].split('/')[:-3])
 # python videdi.pyで実行する場合
 if APP_PATH == '':
-    APP_PATH = '/Applications/videdi.app'
-FFMPEG_PATH = APP_PATH + '/Contents/MacOS/ffmpeg'
-FFPROBE_PATH = APP_PATH + '/Contents/MacOS/ffprobe'
+    FFMPEG_PATH = '/usr/local/bin/ffmpeg'
+    FFPROBE_PATH = '/usr/local/bin/ffprobe'
+else:
+    FFMPEG_PATH = APP_PATH + '/Contents/MacOS/ffmpeg'
+    FFPROBE_PATH = APP_PATH + '/Contents/MacOS/ffprobe'
 
 
 # フォルダ内のvideoファイル名取得
@@ -186,7 +188,7 @@ def print_subtitle(video, srt_file, output_file):
         command = [FFMPEG_PATH, '-i', video, '-vf',
                    'subtitles=' + srt_file + ":force_style='FontSize=10'",
                    output_file]
-        output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except Exception as e:
         print('error:print_subtitle method')
         print(e)
