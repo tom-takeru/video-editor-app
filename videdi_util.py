@@ -1,15 +1,13 @@
 import os
 import subprocess
 import sys
-# 実行ファイルの絶対パスを変数に入れる
-APP_PATH = '/'.join(sys.argv[0].split('/')[:-3])
-# python videdi.pyで実行する場合
-if APP_PATH == '':
+
+try:
+    FFMPEG_PATH = sys._MEIPASS + '/ffmpeg'
+    FFPROBE_PATH = sys._MEIPASS + '/ffprobe'
+except:
     FFMPEG_PATH = '/usr/local/bin/ffmpeg'
     FFPROBE_PATH = '/usr/local/bin/ffprobe'
-else:
-    FFMPEG_PATH = APP_PATH + '/Contents/MacOS/ffmpeg'
-    FFPROBE_PATH = APP_PATH + '/Contents/MacOS/ffprobe'
 
 
 # フォルダ内のvideoファイル名取得
@@ -46,14 +44,9 @@ def check_path(path):
 
 # 無音部分検出
 def silence_sections(video):
-    try:
-        # 無音部分をffmpegで検出
-        command = [FFMPEG_PATH, '-i', video, '-af', 'silencedetect=noise=-30dB:d=0.3', '-f', 'null', '-']
-        output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    except Exception as e:
-        print('error:silence_sections method')
-        print(e)
-        return
+    # 無音部分をffmpegで検出
+    command = [FFMPEG_PATH, '-i', video, '-af', 'silencedetect=noise=-30dB:d=0.3', '-f', 'null', '-']
+    output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # 出力結果から無音部分の始まりと終わりの時間を1セットとする、二次元配列を作る
     s = str(output)
     # 出力結果を改行ごとに分ける
