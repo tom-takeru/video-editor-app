@@ -9,12 +9,12 @@ from imageio.plugins.ffmpeg import FfmpegFormat
 import imageio
 from PIL import ImageTk, Image
 
-
-APP_PATH = '/'.join(sys.argv[0].split('/')[:-3])
-# python videdi.pyで実行する時のため
-if APP_PATH == '':
-    APP_PATH = '/Applications/videdi.app'
-FFMPEG_PATH = APP_PATH + '/Contents/MacOS/ffmpeg'
+try:
+    FFMPEG_PATH = sys._MEIPASS + '/ffmpeg'
+    FFPROBE_PATH = sys._MEIPASS + '/ffprobe'
+except:
+    FFMPEG_PATH = '/usr/local/bin/ffmpeg'
+    FFPROBE_PATH = '/usr/local/bin/ffprobe'
 
 
 # 音楽を再生する
