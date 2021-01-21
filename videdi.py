@@ -18,27 +18,24 @@ import videdi_util
 
 # 出力のエンコードをUTF-8に設定
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-# 実行ファイルの絶対パスを変数に入れる
-APP_PATH = '/'.join(sys.argv[0].split('/')[:-3])
-# python videdi.pyで実行する場合
-if APP_PATH == '':
+
+try:
+    FFMPEG_PATH = sys._MEIPASS + '/ffmpeg'
+    FFPROBE_PATH = sys._MEIPASS + '/ffprobe'
+except:
     FFMPEG_PATH = '/usr/local/bin/ffmpeg'
     FFPROBE_PATH = '/usr/local/bin/ffprobe'
-else:
-    FFMPEG_PATH = APP_PATH + '/Contents/MacOS/ffmpeg'
-    FFPROBE_PATH = APP_PATH + '/Contents/MacOS/ffprobe'
-
 
 WINDOW_WIDTH = 700
 WINDOW_HEIGHT = 600
 
 
-class AutoEditor:
+class VIDEDI:
     def __init__(self, width=WINDOW_WIDTH, height=WINDOW_HEIGHT):
         # TKクラスをインスタンス化
         self.root = tk.Tk()
         # ウィンドウのタイトルを設定
-        self.root.title('AUTO EDITOR')
+        self.root.title('VIDEDI')
         # ウィンドウの大きさを設定
         self.window_width = width
         self.window_height = height
@@ -67,7 +64,7 @@ class AutoEditor:
         pos_y = 0
         self.title_height = 100
         title_font = font.Font(self.root, family='impact', size=self.title_height, weight='bold')
-        self.title_lab = tk.Label(text='AUTO EDITOR', font=title_font, foreground='lightgray', bg='black')
+        self.title_lab = tk.Label(text='VIDEDI', font=title_font, foreground='lightgray', bg='black')
         self.title_lab.place(x=0, y=pos_y, relwidth=1.0, height=self.title_height)
         # 現在選択中フォルダラベル
         pos_y += self.title_height + 15
@@ -645,7 +642,7 @@ class AutoEditor:
 
     def fix_win_keyboard(self, event):
         pressed_key = str(event.char)
-        self.log_frame.set_log(pressed_key)
+        # self.log_frame.set_log(pressed_key)
         event_widget = str(event.widget)
         event_widget_depth = len(event_widget.split('.!'))
         if event_widget_depth >= 3:
@@ -669,7 +666,7 @@ class AutoEditor:
 
 
 def main():
-    AutoEditor()
+    VIDEDI()
 
 
 if __name__ == '__main__':
