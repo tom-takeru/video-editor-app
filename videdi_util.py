@@ -176,11 +176,15 @@ def make_srt(output_file, text_list, subtitle_sections):
 
 
 # 動画の字幕焼き付け
-def print_subtitle(video, srt_file, output_file):
+def print_subtitle(video, srt_file, font_size, font_color, output_file):
     try:
-        command = [FFMPEG_PATH, '-i', video, '-vf',
-                   'subtitles=' + srt_file + ":force_style='FontSize=10'",
-                   output_file]
+        command = [FFMPEG_PATH, '-i', video, '-vf']
+        subtitle_command = 'subtitles=' + srt_file + ":force_style='"
+        subtitle_command += "FontSize=" + font_size
+        subtitle_command += ",PrimaryColour=&H" + font_color[5:7] + font_color[3:5]+ font_color[1:3] + "&"
+        subtitle_command += "'"
+        command += [subtitle_command, ]
+        command += ['-c:a', 'copy', output_file]
         subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except Exception as e:
         print('error:print_subtitle method')

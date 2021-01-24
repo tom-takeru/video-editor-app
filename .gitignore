@@ -1,6 +1,0 @@
-.gitignore
-*
-!videdi.py
-!videdi_util.py
-!videdi_log.py
-!video_audio_player.py

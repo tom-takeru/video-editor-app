@@ -72,6 +72,7 @@ class LogFrame(ClassFrame):
                 self.log_vars[i].set(self.log_vars[i-1].get())
             # テキストをセットする
             self.log_vars[0].set(log_text)
+        print(log_text)
 
     # 大きいログのセット
     def set_big_log(self, s):
