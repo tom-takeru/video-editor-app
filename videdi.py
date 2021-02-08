@@ -10,13 +10,13 @@ from tkinter import font
 from tkinter import filedialog
 from tkinter import messagebox
 from tkinter.scrolledtext import ScrolledText
-import speech_recognition as sr
 
 # 自作モジュール
 import video_audio_player
 import videdi_log
 import videdi_util
 import videdi_colorchooser
+
 
 # 出力のエンコードをUTF-8に設定
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
@@ -35,63 +35,77 @@ WINDOW_HEIGHT = 600
 class Videdi:
 
     def __init__(self, width=WINDOW_WIDTH, height=WINDOW_HEIGHT):
-        # TKクラスをインスタンス化
-        self.root = tk.Tk()
+        # tk.Tkクラスをインスタンス化
+        self.main_window = tk.Tk()
+        
         # ウィンドウのタイトルを設定
-        self.root.title('VIDEDI')
-        # ウィンドウの大きさを設定
+        self.main_window.title('VIDEDI')
+        
+        # ウィンドウの大きさ
         self.window_width = width
         self.window_height = height
-        # ウィンドウをど真ん中に設定
-        # self.window_pos_x = (self.root.winfo_screenwidth() - self.window_width) // 2
-        # self.window_pos_y = (self.root.winfo_screenheight() - self.window_height) // 2
-        # ウィンドウを左上に設定
+        
+        # ウィンドウの位置(中心)
+        # self.window_pos_x = (self.main_window.winfo_screenwidth() - self.window_width) // 2
+        # self.window_pos_y = (self.main_window.winfo_screenheight() - self.window_height) // 2
+        # ウィンドウの位置(左上)
         self.window_pos_x = 0
         self.window_pos_y = 0
-        # ウィンドウの大きさを指定
-        self.root.geometry(str(self.window_width) + 'x' + str(self.window_height)
+        
+        # ウィンドウの大きさと位置を設定
+        self.main_window.geometry(str(self.window_width) + 'x' + str(self.window_height)
                            + '+' + str(self.window_pos_x) + '+' + str(self.window_pos_y))
+    
         # ウィンドウの大きさを固定
-        self.root.resizable(False, False)
+        self.main_window.resizable(False, False)
+        
         # ウィンドウの背景の色を設定
-        window_bg = '#ececec'
-        self.root.configure(bg=window_bg)
+        self.window_bg = '#ececec'
+        self.main_window.configure(bg=self.window_bg)
+
         # ウィンドウの枠を指定
-        self.root.configure(borderwidth=10, relief=tk.RIDGE)
+        self.main_window.configure(borderwidth=10, relief='ridge')
+
         # フォントを指定
-        bold_font = font.Font(self.root, size=16, weight='bold')
-        button_font = font.Font(self.root, size=14)
-        process_button_fg = 'red'
-        self.button_background = window_bg
+        bold_font = font.Font(self.main_window, size=16, weight='bold')
+        button_font = font.Font(self.main_window, size=14)
+        self.button_background = self.window_bg
+
         # タイトルラベル
-        pos_y = 0
-        self.title_height = 100
-        title_font = font.Font(self.root, family='impact', size=self.title_height, weight='bold')
+        widget_pos_y = 0
+        widget_height = 100
+        title_font = font.Font(self.main_window, family='impact', size=widget_height, weight='bold')
         self.title_lab = tk.Label(text='VIDEDI', font=title_font, foreground='lightgray', bg='black')
-        self.title_lab.place(x=0, y=pos_y, relwidth=1.0, height=self.title_height)
+        self.title_lab.place(x=0, y=widget_pos_y, relwidth=1.0, height=widget_height)
+
         # 現在選択中フォルダラベル
-        pos_y += self.title_height + 15
-        height = 20
+        widget_pos_y += widget_height
+        widget_height = 20
+
+        # 処理するフォルダを指定
         self.process_dir = ''
+        # self.process_dir = '/Users/takeruyoshimura/Documents/test2/' #テスト用に初期値を設定
         self.dir_name_min = 40
         self.current_dir_var = tk.StringVar()
         self.current_dir_var.set('編集したい動画のあるフォルダを選択してください')
-        self.current_dir_lab = tk.Label(textvariable=self.current_dir_var, font=bold_font, bg=window_bg)
-        self.current_dir_lab.place(x=0, y=pos_y, relwidth=1.0, height=height)
+        self.current_dir_lab = tk.Label(textvariable=self.current_dir_var, font=bold_font, bg=self.window_bg)
+        self.current_dir_lab.place(x=0, y=widget_pos_y, relwidth=1.0, height=widget_height)
+
         # フォルダ選択ボタン
         self.dir_is_available = False
-        self.sd_button_pos_y = pos_y + height + 15
+        # self.dir_is_available = True #テスト用に初期値を設定
+        pos_y = widget_pos_y + widget_height
         self.sd_button_height = 25
         self.sd_button_relwidth = 0.2
         self.select_dir_button = tk.Button(text='フォルダの選択', command=self.select_dir, font=button_font,
-                                           highlightbackground=self.button_background, fg='black', highlightthickness=0)
-        self.select_dir_button.place(relx=(1 - self.sd_button_relwidth) / 2, y=self.sd_button_pos_y,
+                                           highlightbackground=self.window_bg, fg='black', highlightthickness=0)
+        self.select_dir_button.place(relx=(1 - self.sd_button_relwidth) / 2, y=pos_y,
                                      relwidth=self.sd_button_relwidth, height=self.sd_button_height)
         # スクロール式のログラベル
-        self.scroll_pos_y = self.sd_button_pos_y + self.sd_button_height + 15
+        self.scroll_pos_y = widget_pos_y + self.sd_button_height + 30
         self.scroll_height = 200
         self.log_max = 100
-        self.log_frame = videdi_log.LogFrame(master=self.root, log_max=self.log_max, bg=window_bg,
+        self.log_frame = videdi_log.LogFrame(master=self.main_window, log_max=self.log_max, bg=self.window_bg,
                                              width=self.window_width, height=self.window_height)
         self.log_frame.place(x=0, y=self.scroll_pos_y, relwidth=1.0, height=self.scroll_height)
         self.log_frame.interior.bind('<ButtonPress-1>', self.move_start)
@@ -99,28 +113,28 @@ class Videdi:
         self.log_frame.interior.bind('<MouseWheel>', self.mouse_y_scroll)
         # ログリセットボタン
         self.lr_button_relx = 0.85
-        self.lr_button_pos_y = self.sd_button_pos_y + 15
+        self.lr_button_pos_y = widget_pos_y + 15
         self.lr_button_height = 25
         self.lr_button_relwidth = 0.15
         self.log_reset_button = tk.Button(text='ログリセット', command=self.log_frame.reset_all_logs,
                                           font=button_font,
-                                          highlightbackground=self.button_background, fg='black', highlightthickness=0)
+                                          highlightbackground=self.window_bg, fg='black', highlightthickness=0)
         self.log_reset_button.place(relx=self.lr_button_relx, y=self.lr_button_pos_y,
                                     relwidth=self.lr_button_relwidth, height=self.lr_button_height)
         # 処理選択ラベル
         self.run_choices_pos_y = self.scroll_pos_y + self.scroll_height + 10
-        self.run_choices_lab = tk.Label(text='処理選択', font=bold_font)
+        self.run_choices_lab = tk.Label(text='処理内容', font=bold_font)
         self.run_choices_lab.place(relx=0.05, y=self.run_choices_pos_y)
 
         # 自動ジャンプカットチェックボックス
         self.jumpcut_bln = tk.BooleanVar()
         self.jumpcut_bln.set(True)
-        self.jumpcut_chk = tk.Checkbutton(self.root, variable=self.jumpcut_bln, text='自動ジャンプカット', command=self.set_options)
+        self.jumpcut_chk = tk.Checkbutton(self.main_window, variable=self.jumpcut_bln, text='自動ジャンプカット', command=self.set_options)
         self.jumpcut_chk.place(relx=0.2, y=self.run_choices_pos_y)
         # 字幕修正チェックボックス
         self.subtitle_bln = tk.BooleanVar()
         self.subtitle_bln.set(True)
-        self.subtitle_chk = tk.Checkbutton(self.root, variable=self.subtitle_bln, text='自動字幕付け', command=self.set_options)
+        self.subtitle_chk = tk.Checkbutton(self.main_window, variable=self.subtitle_bln, text='自動字幕付け', command=self.set_options)
         self.subtitle_chk.place(relx=0.45, y=self.run_choices_pos_y)
         # オプションの列
         self.option_lien1_pos_y = self.run_choices_pos_y + 30
@@ -132,38 +146,38 @@ class Videdi:
         # 修正チェックボックス
         self.fix_bln = tk.BooleanVar()
         self.fix_bln.set(True)
-        self.fix_chk = tk.Checkbutton(self.root, variable=self.fix_bln, text='修正')
+        self.fix_chk = tk.Checkbutton(self.main_window, variable=self.fix_bln, text='修正')
         self.fix_chk.place(relx=0.2, y=self.option_lien1_pos_y)
 
         # 有音部分の最小時間を設定(単位:秒)
-        self.min_time_lab = tk.Label(self.root, text='有音部分の最小時間')
-        self.min_time_unit_lab = tk.Label(self.root, text='(秒)')
+        self.min_time_lab = tk.Label(self.main_window, text='有音部分の最小時間')
+        self.min_time_unit_lab = tk.Label(self.main_window, text='(秒)')
         self.min_time = tk.StringVar()
         self.min_time.set('0.5')
-        self.min_time_spinbox = tk.Spinbox(self.root, format='%1.1f', textvariable=self.min_time, from_=0, to=1.0,
+        self.min_time_spinbox = tk.Spinbox(self.main_window, format='%1.1f', textvariable=self.min_time, from_=0, to=1.0,
                                            increment=0.1, state='readonly')
         # 有音部分の前後の余裕を設定(単位:秒)
         self.margin_time_lab = tk.Label(text='有音部分の前後の余裕')
-        self.margin_time_unit_lab = tk.Label(self.root, text='(秒)')
+        self.margin_time_unit_lab = tk.Label(self.main_window, text='(秒)')
         self.margin_time = tk.StringVar()
         self.margin_time.set('0.1')
-        self.margin_time_spinbox = tk.Spinbox(self.root, format='%1.2f', textvariable=self.margin_time, from_=0, to=1.0,
+        self.margin_time_spinbox = tk.Spinbox(self.main_window, format='%1.2f', textvariable=self.margin_time, from_=0, to=1.0,
                                               increment=0.01, state='readonly')
         # 字幕の色選択ボタン
-        self.sutitle_font_color_lab = tk.Label(self.root, text='字幕の色')
-        self.sutitle_font_color_chooser = videdi_colorchooser.ColorSelectButton(self.root)
+        self.sutitle_font_color_lab = tk.Label(self.main_window, text='字幕の色')
+        self.sutitle_font_color_chooser = videdi_colorchooser.ColorSelectButton(self.main_window)
         # 字幕の大きさ選択ボタン
-        self.sutitle_font_size_lab = tk.Label(self.root, text='字幕の大きさ')
+        self.sutitle_font_size_lab = tk.Label(self.main_window, text='字幕の大きさ')
         self.font_size = tk.StringVar()
         self.font_size.set('15')
-        self.sutitle_font_size_spinbox = tk.Spinbox(self.root, format='%2.f', textvariable=self.font_size, from_=5,
+        self.sutitle_font_size_spinbox = tk.Spinbox(self.main_window, format='%2.f', textvariable=self.font_size, from_=5,
                                                     to=30, increment=1, state='readonly', width=3)
         # 実行ボタン
         self.run_button_pos_y = self.option_lien3_pos_y + 40
         self.run_button_height = 25
         self.run_button_relwidth = 0.1
         self.run_button = tk.Button(text='実行', state='disable', command=self.run_button_process, font=button_font,
-                                    highlightbackground=self.button_background, fg=process_button_fg,
+                                    highlightbackground=self.window_bg, fg='red',
                                     highlightthickness=0)
         self.run_button.place(relx=(1-self.run_button_relwidth)/2, y=self.run_button_pos_y,
                               relwidth=self.run_button_relwidth, height=self.run_button_height)
@@ -178,7 +192,7 @@ class Videdi:
 
         # メインループでイベント待ち
         if __name__ == '__main__':
-            self.root.mainloop()
+            self.main_window.mainloop()
 
     def move_start(self, event):
         self.log_frame.canvas.scan_mark(event.x, event.y)
@@ -370,7 +384,18 @@ class Videdi:
             if self.subtitle_bln.get():
                 # 自動字幕付けが選択されていた場合
                 self.log_frame.set_log(video_name + 'の音声部分をテキスト化します')
-                self.speech_recognize(jumpcut_video_list, text_dir)
+                for j, jumpcut_video in enumerate(jumpcut_video_list):
+                    jumpcut_video_name = os.path.split(jumpcut_video)[1]
+                    text_file = text_dir + os.path.splitext(jumpcut_video_name)[0] + '.txt'
+                    if videdi_util.speech_recognize(jumpcut_video, text_file):
+                        # インターネット接続あり
+                        self.log_frame.set_progress_log('音声テキスト化', j + 1, len(jumpcut_video_list))
+                        continue
+                    else:
+                        # インターネット接続なし
+                        with open(text_file, mode='w', encoding='utf8') as f:
+                            f.write('')
+                        self.log_frame.set_log('インターネット接続がないため、音声を認識をスキップします')
                 self.log_frame.set_log(video_name + 'の字幕を動画に焼き付けます')
             else:
                 # 自動字幕付けが選択されていない場合
@@ -401,7 +426,7 @@ class Videdi:
                 subtitle_colors.append(self.sutitle_font_color_chooser.bg_color)
                 subtitle_sizes.append(self.font_size.get())
             if not self.jumpcut_bln.get():
-                # 自動ジャンプカットが選択されている場合
+                # 自動ジャンプカットが選択されていない場合
                 for j in range(len(video_sections)):
                     video_sections [j][2] = False
             if self.fix_bln.get():
@@ -430,20 +455,20 @@ class Videdi:
                 fix_window.video_scale.place(relx=scale_var_relx, rely=line1_rel_y, relwidth=scale_var_relwidth)
                 # 再生ボタン
                 fix_window.preview_button = tk.Button(fix_window, text='▶︎', command=self.fix_win_preview,
-                                                      highlightbackground=self.button_background, fg='red',
+                                                      highlightbackground=self.window_bg, fg='red',
                                                       font=('', 27),
                                                       highlightthickness=0)
                 fix_window.preview_button.place(relx=0.47, rely=line2_rel_y, relwidth=button_relwidth,
                                                 height=button_height)
                 # 前へボタン
                 fix_window.back_button = tk.Button(fix_window, text='＜', command=self.fix_win_back, font=('', 27),
-                                                   highlightbackground=self.button_background, fg='black',
+                                                   highlightbackground=self.window_bg, fg='black',
                                                    highlightthickness=0)
                 fix_window.back_button.place(relx=0.39, rely=line2_rel_y, relwidth=button_relwidth,
                                              height=button_height)
                 # 次へボタン
                 fix_window.go_button = tk.Button(fix_window, text='＞', command=self.fix_win_go, font=('', 27),
-                                                 highlightbackground=self.button_background, fg='black',
+                                                 highlightbackground=self.window_bg, fg='black',
                                                  highlightthickness=0)
                 fix_window.go_button.place(relx=0.55, rely=line2_rel_y, relwidth=button_relwidth,
                                            height=button_height)
@@ -470,7 +495,7 @@ class Videdi:
                                                                   command=self.fix_win_preview)
                 fix_window.sutitle_font_size_spinbox.place(relx=0.89, rely=line3_rel_y)
                 fix_window.finish_button = tk.Button(fix_window, text='編集完了', command=self.fix_win_finish,
-                                                     highlightbackground=self.button_background, fg='black',
+                                                     highlightbackground=self.window_bg, fg='black',
                                                      highlightthickness=0)
                 fix_window.finish_button.place(relx=0.89, rely=last_line_rel_y, relwidth=0.1, height=button_height)
                 fix_window.protocol("WM_DELETE_WINDOW", self.fix_win_finish)
@@ -485,7 +510,6 @@ class Videdi:
                     fix_window.sutitle_font_color_chooser.set_color(subtitle_colors[current_video_scale_var-1])
                     fix_window.font_size.set(subtitle_sizes[current_video_scale_var-1])
                     if 'frame' in str(fix_window.focus_get()):
-                        self.log_frame.set_log(fix_window.focus_get())
                         new_subtitle_text = fix_window.subtitle_text_box.get('1.0', 'end -1c')
                         if current_subtitle_text != new_subtitle_text:
                             with open(text_file, mode='w', encoding='utf8') as wf:
@@ -536,7 +560,7 @@ class Videdi:
                     frame.video_label.destroy()
                     current_video_scale_var = int(video_scale_var.get())
                     if self.next_action == 'finish':
-                        if tk.messagebox.askyesno(title='編集完了', message='編集を終了しますか？'):
+                        if messagebox.askyesno(title='編集完了', message='編集を終了しますか？'):
                             fix_window.destroy()
                             break
                         else:
@@ -597,67 +621,6 @@ class Videdi:
         self.enable_all_button()
         # 音声テキスト作成完了ログ
         self.log_frame.set_big_log(self.process_dir.split('/')[-2] + 'フォルダ内の動画を編集しました')
-        return
-
-    # 音声認識処理
-    def speech_recognize(self, video_list, text_dir):
-        try:
-            os.remove(text_dir + '.tmp/')
-        except OSError:
-            pass
-        os.mkdir(text_dir + '.tmp/')
-        for i, video in enumerate(video_list):
-            video_name = os.path.split(video)[1]
-            audio = text_dir + '.tmp/' + os.path.splitext(video_name)[0] + '.wav'
-            text_file = os.path.splitext(video_name)[0] + '.txt'
-            try:
-                command = [FFMPEG_PATH, '-i', video, audio]
-                subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            except Exception as e:
-                print('error:speech_recognize method')
-                print(e)
-                self.log_frame.set_log('error:speech_recognize method')
-                return
-            try:
-                r = sr.Recognizer()
-                with sr.AudioFile(audio) as source:
-                    audio_rec = r.record(source)
-                os.remove(audio)
-                s = r.recognize_google(audio_rec, language='ja')
-                # 字幕が長い場合は折り返す
-                if len(s) > 35:
-                    string_sections = s.split(' ')
-                    s = ''
-                    for j in range(len(string_sections)):
-                        if len(s) < 30:
-                            s += string_sections[j]
-                        else:
-                            s += '\n' + string_sections[j]
-                else:
-                    string_sections = s.split(' ')
-                    s = ''
-                    for string in string_sections:
-                        s += string
-            except sr.UnknownValueError:
-                # 何を言っているのかわからなかった場合は空の文字列にする
-                s = ''
-            except sr.RequestError:
-                # インターネット接続がなかった場合は全て空の文字列にする
-                for j in range(i, len(video_list)):
-                    video_name = os.path.split(video_list[j])[1]
-                    text_file = os.path.splitext(video_name)[0] + '.txt'
-                    with open(text_dir + '/' + text_file, mode='w', encoding='utf8') as f:
-                        f.write('')
-                self.log_frame.set_log('インターネット接続がないため、音声を認識をスキップします')
-                break
-            with open(text_dir + '/' + text_file, mode='w', encoding='utf8') as f:
-                f.write(s)
-            # 進捗をパーセントで表示
-            self.log_frame.set_progress_log('音声テキスト化', i + 1, len(video_list))
-        try:
-            shutil.rmtree(text_dir + '.tmp/')
-        except OSError:
-            pass
         return
 
     def divide_video_into_sections(self, video, sections, output_dir):
