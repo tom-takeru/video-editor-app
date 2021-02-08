@@ -49,6 +49,8 @@ class LogFrame(ClassFrame):
 
     # ログのセット
     def set_log(self, log_text):
+        if len(self.log_vars) > 1 and str(self.log_vars[0].get()) == log_text:
+            return
         # ログの行数が最大値未満の場合
         if len(self.log_vars) < self.log_max:
             # ログのテキストを入れる変数を追加する
@@ -61,7 +63,7 @@ class LogFrame(ClassFrame):
             # ログを表示するラベルを追加する
             self.log_labels.append(tk.Label(self.interior, textvariable=self.log_vars[len(self.log_vars) - 1],
                                             foreground='#' + format(self.log_color, '02x')*3, bg=self.bg))
-            # ログのラベルをホイールで動くようにする
+            # ログのラベルをマウスホイールで動くようにする
             self.log_labels[len(self.log_vars)-1].pack(anchor=tk.S, fill=tk.X, padx=0, pady=0, ipadx=0, ipady=0)
             self.log_labels[len(self.log_vars)-1].bind('<MouseWheel>', self.mouse_y_scroll)
             # テキストを設定する
@@ -73,6 +75,7 @@ class LogFrame(ClassFrame):
             # テキストをセットする
             self.log_vars[0].set(log_text)
         print(log_text)
+        return
 
     # 大きいログのセット
     def set_big_log(self, s):
