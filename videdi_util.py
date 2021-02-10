@@ -2,7 +2,9 @@ import os
 import subprocess
 import sys
 import speech_recognition as sr
-import api
+import secret
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 
 try:
     FFMPEG_PATH = sys._MEIPASS + '/ffmpeg'
@@ -162,14 +164,15 @@ def speech_recognize(video, output_text_file):
             audio_rec = r.record(source)
         os.remove(audio)
         # s = r.recognize_google(audio_rec, language='ja', key=api.GOOGLE_SPEECH_RECOGNITION_API_KEY)
-        text = r.recognize_wit(audio_rec, key=api.WIT_API_KEY)
+        text = r.recognize_wit(audio_rec, key=secret.WIT_API_KEY)
         # 文字列を整える
         new_text = fix_text_for_subtitle(text)
     except sr.UnknownValueError:
         # 何を言っているのかわからなかった場合は空の文字列にする
         new_text = ''
-    except sr.RequestError:
+    except sr.RequestError as e:
         # インターネット接続がなかった場合はFalseを返す
+        print(e)
         return False
     with open(output_text_file, mode='w', encoding='utf8') as f:
         f.write(new_text)

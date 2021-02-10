@@ -16,6 +16,7 @@ import video_audio_player
 import videdi_log
 import videdi_util
 import videdi_colorchooser
+import questionnaire
 
 
 # 出力のエンコードをUTF-8に設定
@@ -121,6 +122,9 @@ class Videdi:
                                           highlightbackground=self.window_bg, fg='black', highlightthickness=0)
         self.log_reset_button.place(relx=self.lr_button_relx, y=self.lr_button_pos_y,
                                     relwidth=self.lr_button_relwidth, height=self.lr_button_height)
+        #アンケートボタン
+        self.questionnaire_button = questionnaire.Questionnaire(self.main_window)
+        self.questionnaire_button.place(relx=0, y=self.lr_button_pos_y)
         # 処理選択ラベル
         self.run_choices_pos_y = self.scroll_pos_y + self.scroll_height + 10
         self.run_choices_lab = tk.Label(text='処理内容', font=bold_font)
@@ -131,18 +135,22 @@ class Videdi:
         self.jumpcut_bln.set(True)
         self.jumpcut_chk = tk.Checkbutton(self.main_window, variable=self.jumpcut_bln, text='自動ジャンプカット', command=self.set_options)
         self.jumpcut_chk.place(relx=0.2, y=self.run_choices_pos_y)
+
         # 字幕修正チェックボックス
         self.subtitle_bln = tk.BooleanVar()
         self.subtitle_bln.set(True)
         self.subtitle_chk = tk.Checkbutton(self.main_window, variable=self.subtitle_bln, text='自動字幕付け', command=self.set_options)
         self.subtitle_chk.place(relx=0.45, y=self.run_choices_pos_y)
+
         # オプションの列
         self.option_lien1_pos_y = self.run_choices_pos_y + 30
         self.option_lien2_pos_y = self.option_lien1_pos_y + 30
         self.option_lien3_pos_y = self.option_lien2_pos_y + 30
+
         # オプション選択ラベル
         self.option_lab = tk.Label(text='オプション', font=bold_font)
         self.option_lab.place(relx=0.05, y=self.option_lien1_pos_y)
+
         # 修正チェックボックス
         self.fix_bln = tk.BooleanVar()
         self.fix_bln.set(True)
@@ -156,6 +164,7 @@ class Videdi:
         self.min_time.set('0.5')
         self.min_time_spinbox = tk.Spinbox(self.main_window, format='%1.1f', textvariable=self.min_time, from_=0, to=1.0,
                                            increment=0.1, state='readonly')
+
         # 有音部分の前後の余裕を設定(単位:秒)
         self.margin_time_lab = tk.Label(text='有音部分の前後の余裕')
         self.margin_time_unit_lab = tk.Label(self.main_window, text='(秒)')
