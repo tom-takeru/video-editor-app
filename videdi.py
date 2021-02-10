@@ -84,8 +84,8 @@ class Videdi:
         widget_height = 20
 
         # 処理するフォルダを指定
-        self.process_dir = ''
-        # self.process_dir = '/Users/takeruyoshimura/Documents/test2/' #テスト用に初期値を設定
+        # self.process_dir = ''
+        self.process_dir = '/Users/takeruyoshimura/Documents/test2/' #テスト用に初期値を設定
         self.dir_name_min = 40
         self.current_dir_var = tk.StringVar()
         self.current_dir_var.set('編集したい動画のあるフォルダを選択してください')
@@ -93,8 +93,8 @@ class Videdi:
         self.current_dir_lab.place(x=0, y=widget_pos_y, relwidth=1.0, height=widget_height)
 
         # フォルダ選択ボタン
-        self.dir_is_available = False
-        # self.dir_is_available = True #テスト用に初期値を設定
+        # self.dir_is_available = False
+        self.dir_is_available = True #テスト用に初期値を設定
         pos_y = widget_pos_y + widget_height
         self.sd_button_height = 25
         self.sd_button_relwidth = 0.2
@@ -457,6 +457,7 @@ class Videdi:
                 scale_var_relwidth = 0.96
                 button_height = 25
                 button_relwidth = 0.06
+                # 再生バー
                 video_scale_var = tk.DoubleVar()
                 fix_window.video_scale = tk.Scale(fix_window, variable=video_scale_var, orient=tk.HORIZONTAL,
                                                   from_=1, to=len(jumpcut_video_list), activebackground='red', width=10,
@@ -481,27 +482,32 @@ class Videdi:
                                                  highlightthickness=0)
                 fix_window.go_button.place(relx=0.55, rely=line2_rel_y, relwidth=button_relwidth,
                                            height=button_height)
+                # カット選択チェックボックス
                 fix_window.cut_chk = tk.Checkbutton(fix_window, variable=self.cut_bln, text='カットする')
                 fix_window.cut_chk.place(relx=0.62, rely=line2_rel_y)
+                # 字幕変更ボタン
+                fix_window.apply_changes_button = tk.Button(fix_window, text='字幕変更︎', command=self.fix_win_preview,
+                                                      highlightbackground=self.window_bg, fg='black',highlightthickness=0)
+                fix_window.apply_changes_button.place(relx=0.8, rely=line2_rel_y, relwidth=0.1, height=button_height)
+                # 字幕修正テキストボックス
                 fix_window.subtitle_text_box = ScrolledText(fix_window, font=("", 15), height=5, width=57)
                 fix_window.subtitle_text_box.place(relx=0.01, rely=line3_rel_y)
-                fix_window.subtitle_text_box.bind('<Leave>', lambda n: fix_window.focus_set())
+                fix_window.subtitle_text_box.bind('<Shift-Key>', self.fix_win_keyboard2)
 
                 # 字幕の色選択ボタン
                 fix_window.sutitle_font_color_lab = tk.Label(fix_window, text='字幕の色')
-                fix_window.sutitle_font_color_lab.place(relx=0.82, rely=line4_rel_y)
+                fix_window.sutitle_font_color_lab.place(relx=0.8, rely=line4_rel_y)
                 fix_window.sutitle_font_color_chooser = videdi_colorchooser.ColorSelectButton(fix_window,
                                                                                               self.sutitle_font_color_chooser.bg_color,
                                                                                               self.fix_win_preview)
                 fix_window.sutitle_font_color_chooser.place(relx=0.89, rely=line4_rel_y)
                 # 字幕の大きさ選択ボタン
                 fix_window.sutitle_font_size_lab = tk.Label(fix_window, text='字幕の大きさ')
-                fix_window.sutitle_font_size_lab.place(relx=0.79, rely=line3_rel_y)
+                fix_window.sutitle_font_size_lab.place(relx=0.77, rely=line3_rel_y)
                 fix_window.font_size = tk.StringVar()
                 fix_window.font_size.set(self.font_size.get())
                 fix_window.sutitle_font_size_spinbox = tk.Spinbox(fix_window, format='%2.f', textvariable=fix_window.font_size,
-                                                                  from_=5, to=30, increment=1, state='readonly', width=3,
-                                                                  command=self.fix_win_preview)
+                                                                  from_=5, to=30, increment=1, state='readonly', width=3)
                 fix_window.sutitle_font_size_spinbox.place(relx=0.89, rely=line3_rel_y)
                 fix_window.finish_button = tk.Button(fix_window, text='編集完了', command=self.fix_win_finish,
                                                      highlightbackground=self.window_bg, fg='black',
@@ -510,6 +516,7 @@ class Videdi:
                 fix_window.protocol("WM_DELETE_WINDOW", self.fix_win_finish)
                 current_video_scale_var = 1
                 while True:
+                    fix_window.focus_set()
                     jumpcut_video = jumpcut_video_list[current_video_scale_var-1]
                     jumpcut_video_file = os.path.split(jumpcut_video)[1]
                     subtitle_video = subtitle_dir + os.path.splitext(jumpcut_video_file)[0] + '_subtitle.mp4'
@@ -518,24 +525,8 @@ class Videdi:
                         current_subtitle_text = rf.read()
                     fix_window.sutitle_font_color_chooser.set_color(subtitle_colors[current_video_scale_var-1])
                     fix_window.font_size.set(subtitle_sizes[current_video_scale_var-1])
-                    if 'frame' in str(fix_window.focus_get()):
-                        new_subtitle_text = fix_window.subtitle_text_box.get('1.0', 'end -1c')
-                        if current_subtitle_text != new_subtitle_text:
-                            with open(text_file, mode='w', encoding='utf8') as wf:
-                                wf.write(new_subtitle_text)
-                            continue
-                        else:
-                            srt_file = videdi_util.make_srt(srt_dir + os.path.splitext(jumpcut_video_file)[0] + '.srt',
-                                                            [text_file, ],
-                                                            [[0.0, video_sections[current_video_scale_var - 1][1]
-                                                              - video_sections[current_video_scale_var - 1][0]], ])
-                            os.remove(subtitle_video)
-                            videdi_util.print_subtitle(jumpcut_video, srt_file, subtitle_sizes[current_video_scale_var-1], subtitle_colors[current_video_scale_var-1],
-                                                       subtitle_dir + os.path.splitext(jumpcut_video_file)[0]
-                                                       + '_subtitle.mp4')
-                    else:
-                        fix_window.subtitle_text_box.delete('1.0', 'end')
-                        fix_window.subtitle_text_box.insert('1.0', current_subtitle_text)
+                    fix_window.subtitle_text_box.delete('1.0', 'end')
+                    fix_window.subtitle_text_box.insert('1.0', current_subtitle_text)
                     self.cut_bln.set(video_sections[current_video_scale_var - 1][2])
                     self.thread_event = threading.Event()
                     self.player.__init__()
@@ -545,26 +536,31 @@ class Videdi:
                     fix_window.back_button.configure(state='normal')
                     fix_window.go_button.configure(state='normal')
                     fix_window.preview_button.configure(state='normal')
+                    fix_window.apply_changes_button.configure(state='normal')
                     fix_window.finish_button.configure(state='normal')
                     self.player.play()
                     self.thread_event.wait()
                     fix_window.back_button.configure(state='disable')
                     fix_window.go_button.configure(state='disable')
                     fix_window.preview_button.configure(state='disable')
+                    fix_window.apply_changes_button.configure(state='disable')
                     fix_window.finish_button.configure(state='disable')
                     new_subtitle_text = fix_window.subtitle_text_box.get('1.0', 'end -1c')
-                    subtitle_colors[current_video_scale_var-1] = fix_window.sutitle_font_color_chooser.bg_color
-                    subtitle_sizes[current_video_scale_var-1] = fix_window.font_size.get()
-                    with open(text_file, mode='w', encoding='utf8') as wf:
-                        wf.write(new_subtitle_text)
-                    srt_file = videdi_util.make_srt(srt_dir + os.path.splitext(jumpcut_video_file)[0] + '.srt',
-                                                    [text_file, ],
-                                                    [[0.0, video_sections[current_video_scale_var-1][1]
-                                                      - video_sections[current_video_scale_var-1][0]], ])
-                    os.remove(subtitle_video)
-                    videdi_util.print_subtitle(jumpcut_video, srt_file, subtitle_sizes[current_video_scale_var-1], subtitle_colors[current_video_scale_var-1],
-                                               subtitle_dir + os.path.splitext(jumpcut_video_file)[0]
-                                               + '_subtitle.mp4')
+                    if new_subtitle_text != current_subtitle_text or \
+                        subtitle_colors[current_video_scale_var-1] != fix_window.sutitle_font_color_chooser.bg_color or \
+                        subtitle_sizes[current_video_scale_var-1] != fix_window.font_size.get():
+                        subtitle_colors[current_video_scale_var-1] = fix_window.sutitle_font_color_chooser.bg_color
+                        subtitle_sizes[current_video_scale_var-1] = fix_window.font_size.get()
+                        with open(text_file, mode='w', encoding='utf8') as wf:
+                            wf.write(new_subtitle_text)
+                        srt_file = videdi_util.make_srt(srt_dir + os.path.splitext(jumpcut_video_file)[0] + '.srt',
+                                                        [text_file, ],
+                                                        [[0.0, video_sections[current_video_scale_var-1][1]
+                                                          - video_sections[current_video_scale_var-1][0]], ])
+                        os.remove(subtitle_video)
+                        videdi_util.print_subtitle(jumpcut_video, srt_file, subtitle_sizes[current_video_scale_var-1], subtitle_colors[current_video_scale_var-1],
+                                                   subtitle_dir + os.path.splitext(jumpcut_video_file)[0]
+                                                   + '_subtitle.mp4')
                     video_sections[current_video_scale_var - 1][2] = self.cut_bln.get()
                     frame.video_label.destroy()
                     current_video_scale_var = int(video_scale_var.get())
@@ -672,12 +668,8 @@ class Videdi:
 
     def fix_win_keyboard(self, event):
         pressed_key = str(event.char)
+        self.log_frame.set_log('\'' + repr(event.char) + '\'')
         if 'frame' in str(event.widget):
-            result = re.findall('\\\\[a-zA-Z0-9]+', repr(event.char))
-            if len(result) == 0 and len(repr(event.char)) != 0:
-                self.fix_win_preview()
-            elif str(event.char) == '\x7f' or str(event.char) == '\r':
-                self.fix_win_preview()
             return
         if pressed_key == ' ' or pressed_key == '　':
             self.fix_win_preview()
@@ -690,6 +682,10 @@ class Videdi:
         elif pressed_key == '\uf701':
             self.cut_bln.set(False)
         return
+    def fix_win_keyboard2(self, event):
+        if str(event.char) == '\r':
+            self.fix_win_preview()
+
 
 
 def main():
