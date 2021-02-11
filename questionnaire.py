@@ -99,18 +99,21 @@ class Questionnaire(tk.Button):
         send_mail_button.place(relx=0.35, rely=0.93, relwidth=0.3)
 
     def send_answer(self):
-        if not messagebox.askyesno(title='アンケート送信', message='アンケートを送信しますか？'):
-            return
-        subject, body = self.create_subject_body()
-        mime = {'type': 'text', 'subtype': 'comma-separated-values'}
         try:
-            os.mkdir(WORK_DIR)
-        except OSError:
-            pass
-        attach_file = self.create_csv_file(output_dir=WORK_DIR)
-        msg = self.create_message(subject, body, mime, attach_file)
-        self.send_mail(msg)
-        shutil.rmtree(WORK_DIR)
+            if not messagebox.askyesno(title='アンケート送信', message='アンケートを送信しますか？'):
+                return
+            subject, body = self.create_subject_body()
+            mime = {'type': 'text', 'subtype': 'comma-separated-values'}
+            try:
+                os.mkdir(WORK_DIR)
+            except OSError:
+                pass
+            attach_file = self.create_csv_file(output_dir=WORK_DIR)
+            msg = self.create_message(subject, body, mime, attach_file)
+            self.send_mail(msg)
+            shutil.rmtree(WORK_DIR)
+        except OSError as e:
+            print(e)
         return
 
     def create_subject_body(self):
