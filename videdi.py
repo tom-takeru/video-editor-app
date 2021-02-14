@@ -302,7 +302,7 @@ class Videdi:
         if not (self.jumpcut_bln.get() or self.subtitle_bln.get()):
             self.log_frame.set_log('処理を選択してください')
         elif not self.dir_is_available:
-            self.log_frame.set_log('フォルダに処理できる動画がありません。')
+            self.log_frame.set_log('フォルダを選択してください')
         else:
             # ボタン無効化
             self.disable_all_button()
@@ -510,6 +510,8 @@ class Videdi:
                     fix_window.preview_button.configure(state='disable')
                     fix_window.apply_changes_button.configure(state='disable')
                     fix_window.finish_button.configure(state='disable')
+                    # if self.next_action == 'preview2':
+                    #     fix_window.subtitle_text_box.
                     new_subtitle_text = fix_window.subtitle_text_box.get('1.0', 'end -1c')
                     if new_subtitle_text != current_subtitle_text or \
                             subtitle_colors[current_video_scale_var-1] != fix_window.sutitle_font_color_chooser.bg_color or \
@@ -554,16 +556,20 @@ class Videdi:
                             current_video_scale_var += 1
                             video_scale_var.set(current_video_scale_var)
             # フォルダ名を変更
-            new_text_dir = self.process_dir + '.tmp/' + os.path.splitext(video_name)[0] + '_text/'
+            new_text_dir = self.process_dir + os.path.splitext(video_name)[0] + '_text/'
+            new_text_dir = videdi_util.check_path(new_text_dir)
             os.rename(text_dir, new_text_dir)
             text_dir = new_text_dir
             new_srt_dir = self.process_dir + '.tmp/' + os.path.splitext(video_name)[0] + '_srt/'
+            new_srt_dir = videdi_util.check_path(new_srt_dir)
             os.rename(srt_dir, new_srt_dir)
             srt_dir = new_srt_dir
-            new_jumpcut_dir = self.process_dir + '.tmp/' + os.path.splitext(video_name)[0] + '_jumpcut/'
+            new_jumpcut_dir = self.process_dir + os.path.splitext(video_name)[0] + '_jumpcut/'
+            new_jumpcut_dir = videdi_util.check_path(new_jumpcut_dir)
             os.rename(jumpcut_dir, new_jumpcut_dir)
             jumpcut_dir = new_jumpcut_dir
-            new_subtitle_dir = self.process_dir + '.tmp/' + os.path.splitext(video_name)[0] + '_subtitle/'
+            new_subtitle_dir = self.process_dir + os.path.splitext(video_name)[0] + '_subtitle/'
+            new_subtitle_dir = videdi_util.check_path(new_subtitle_dir)
             os.rename(subtitle_dir, new_subtitle_dir)
             subtitle_dir = new_subtitle_dir
             subtitle_video_list = videdi_util.search_videos(subtitle_dir)
@@ -588,11 +594,9 @@ class Videdi:
                     video_num += 1
                     new_sections.append(video_sections[j])
             # 動画を結合
-            jumpcut_subtitle_video = videdi_util.check_path(os.path.splitext(video)[0] + '_jumpcut_subtitle.mp4')
+            jumpcut_subtitle_video = videdi_util.check_path(os.path.splitext(video)[0] + '_(edited_by_videdi).mp4')
             videdi_util.combine_video(subtitle_dir, jumpcut_subtitle_video)
             self.log_frame.set_log(video_name + 'を編集しました')
-            new_text_dir = self.process_dir + '.tmp/' + os.path.splitext(video_name)[0] + '_text/'
-            os.rename(text_dir, new_text_dir)
         # 一時的なフォルダを削除
         shutil.rmtree(self.process_dir + '.tmp/')
         # ボタン有効化
@@ -640,10 +644,9 @@ class Videdi:
         return
 
     def fix_win_keyboard(self, event):
-        pressed_key = str(event.char)
-        # self.log_frame.set_log('\'' + repr(event.char) + '\'')
         if 'frame' in str(event.widget):
             return
+        pressed_key = str(event.char)
         if pressed_key == ' ' or pressed_key == '　':
             self.fix_win_preview()
         elif pressed_key == '\uf703':
@@ -658,7 +661,12 @@ class Videdi:
 
     def fix_win_keyboard2(self, event):
         if str(event.char) == '\r':
+            pos = event.widget.index('insert')
+            text = event.widget.get(pos, str(int(float(pos))+1) + '.end')
+            event.widget.delete(pos, str(int(float(pos))+1) + '.end')
+            event.widget.insert(pos, text)
             self.fix_win_preview()
+        return
 
 
 def main():

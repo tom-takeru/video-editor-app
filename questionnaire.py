@@ -11,6 +11,7 @@ from tkinter.scrolledtext import ScrolledText
 import csv
 import shutil
 import sys
+import platform
 
 import secret
 
@@ -25,7 +26,7 @@ class Questionnaire(tk.Button):
     def __init__(self, master):
         super().__init__(
             master=master,
-            text="アンケート",
+            text="利用アンケート",
             command=self.questionnaire,
         )
         self.master = master
@@ -48,6 +49,7 @@ class Questionnaire(tk.Button):
         self.questionnaire_scale_var = []
         self.questionnaire_scale = []
         self.scale_texts = []
+        self.scale_texts.append('アプリケーションの起動時間が長い')
         self.scale_texts.append('ボタンなどの配置が良い')
         self.scale_texts.append('ログの表示がわかりやすい')
         self.scale_texts.append('修正画面は操作しやすい')
@@ -61,11 +63,15 @@ class Questionnaire(tk.Button):
 
         self.connection_error_lab = None
 
+    def window_focus_set(self, *args):
+        self.questionnaire_window.focus_set()
+        return
+
     def questionnaire(self):
         self.questionnaire_window = tk.Toplevel(self.master)
         self.questionnaire_window.title('アンケート')
         self.questionnaire_window.configure(borderwidth=10, relief=tk.RIDGE)
-        self.questionnaire_window.geometry('500x600')
+        self.questionnaire_window.geometry('500x700')
         self.questionnaire_window.resizable(False, False)
         self.questionnaire_window.protocol("WM_DELETE_WINDOW", self.questionnaire_window.destroy)
         # 名前
@@ -82,7 +88,7 @@ class Questionnaire(tk.Button):
             row += 1
             self.questionnaire_bln.append(tk.BooleanVar())
             self.questionnaire_chk.append(tk.Checkbutton(self.questionnaire_window, variable=self.questionnaire_bln[i],
-                                                         text=self.chk_texts[i]))
+                                                         text=self.chk_texts[i], command=self.window_focus_set))
             self.questionnaire_chk[i].grid(column=0, row=row, sticky=tk.W)
 
         row += 1
@@ -104,7 +110,8 @@ class Questionnaire(tk.Button):
             self.questionnaire_scale.append(tk.Scale(self.questionnaire_window,
                                                      variable=self.questionnaire_scale_var[i],
                                                      orient=tk.HORIZONTAL, from_=1.0, to=5.0, resolution=0.1,
-                                                     activebackground='red'))
+                                                     length=200,
+                                                     activebackground='red', command=self.window_focus_set))
             self.questionnaire_scale_lab[i].grid(column=0, row=row, columnspan=2, sticky=tk.E)
             self.questionnaire_scale[i].grid(column=2, row=row, columnspan=3)
 
@@ -143,7 +150,13 @@ class Questionnaire(tk.Button):
         reporter = self.reporter_textbox.get()
         reporter = reporter if reporter != '' else '名無し'
         subject = 'vidediアンケート(' + reporter + 'さん)'
-        texts_max_len = max([len(max(self.chk_texts)), len(max(self.scale_texts))]) + 1
+        texts_len = []
+        for text in self.chk_texts:
+            texts_len.append(len(text))
+        for text in self.scale_texts:
+            texts_len.append(len(text))
+        texts_max_len = max(texts_len) + 1
+        print(texts_max_len)
         body = ''
         body += 'お名前\n' + reporter + 'さん\n\n'
         for i in range(len(self.chk_texts)):
@@ -157,6 +170,8 @@ class Questionnaire(tk.Button):
         body += 'コメント\n'
         comment = self.questionnaire_comment_box.get('1.0', 'end -1c')
         body += comment if comment != '' else '--------------'
+        body += '\n'
+        body += 'OSバージョン: ' + platform.platform(terse=True)
         body += '\n\n\n'
         return subject, body
 
@@ -212,10 +227,3 @@ class Questionnaire(tk.Button):
         smtp.close()
         self.questionnaire_window.destroy()
         return
-
-
-# main_window = tk.Tk()
-# main_window.title('hello')
-# question_button = Questionnaire(main_window)
-# question_button.pack()
-# main_window.mainloop()
