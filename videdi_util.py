@@ -3,13 +3,15 @@ import subprocess
 import sys
 import speech_recognition as sr
 import secret
+
+# speech_recognitionの通信において認証されていないSSL通信で接続するため
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
 try:
     FFMPEG_PATH = sys._MEIPASS + '/ffmpeg'
     FFPROBE_PATH = sys._MEIPASS + '/ffprobe'
-except:
+except AttributeError:
     FFMPEG_PATH = '/usr/local/bin/ffmpeg'
     FFPROBE_PATH = '/usr/local/bin/ffprobe'
 
@@ -232,7 +234,7 @@ def print_subtitle(video, srt_file, font_size, font_color, output_file):
         command = [FFMPEG_PATH, '-i', video, '-vf']
         subtitle_command = 'subtitles=' + srt_file + ":force_style='"
         subtitle_command += "FontSize=" + font_size
-        subtitle_command += ",PrimaryColour=&H" + font_color[5:7] + font_color[3:5]+ font_color[1:3] + "&"
+        subtitle_command += ",PrimaryColour=&H" + font_color[5:7] + font_color[3:5] + font_color[1:3] + "&"
         subtitle_command += "'"
         command += [subtitle_command, ]
         command += ['-c:a', 'copy', output_file]

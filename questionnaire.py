@@ -17,16 +17,16 @@ import secret
 WORK_DIR = './.tmp/'
 try:
     WORK_DIR = sys._MEIPASS + '/.tmp/'
-except:
+except AttributeError:
     pass
 
 
 class Questionnaire(tk.Button):
     def __init__(self, master):
         super().__init__(
-        master = master,
-        text = "アンケート",
-        command = self.questionnaire,  # クリック時に実行
+            master=master,
+            text="アンケート",
+            command=self.questionnaire,
         )
         self.smtp_host = 'smtp.gmail.com'
         self.smtp_port = 465
@@ -34,6 +34,30 @@ class Questionnaire(tk.Button):
         self.from_address = secret.GMAIL
         self.to_address = secret.SCHOOL_MAIL
 
+        self.questionnaire_window = None
+        self.reporter_textbox = None
+
+        self.questionnaire_bln = []
+        self.questionnaire_chk = []
+        self.chk_texts = []
+        self.chk_texts.append('動画を編集したことがある')
+        self.chk_texts.append('動画編集をしている人が知り合いにいる')
+
+        self.questionnaire_scale_lab = []
+        self.questionnaire_scale_var = []
+        self.questionnaire_scale = []
+        self.scale_texts = []
+        self.scale_texts.append('ボタンなどの配置が良い')
+        self.scale_texts.append('ログの表示がわかりやすい')
+        self.scale_texts.append('修正画面は操作しやすい')
+        self.scale_texts.append('操作でわからないところがあった')
+        self.scale_texts.append('楽に編集できた')
+        self.scale_texts.append('全体的に使いやすい')
+
+        self.questionnaire_comment_lab = None
+        self.questionnaire_comment_box = None
+
+        self.connection_error_lab = None
 
     def questionnaire(self):
         self.questionnaire_window = tk.Toplevel()
@@ -48,42 +72,28 @@ class Questionnaire(tk.Button):
         self.reporter_textbox = tk.Entry(self.questionnaire_window, width=20)
         self.reporter_textbox.grid(column=0, row=row, columnspan=2, sticky=tk.E)
 
-        self.questionnaire_bln = []
-        self.questionnaire_chk = []
-        self.chk_texts = []
-        self.chk_texts.append('動画を編集したことがある')
-        self.chk_texts.append('動画編集をしている人が知り合いにいる')
         for i in range(len(self.chk_texts)):
             row += 1
             self.questionnaire_bln.append(tk.BooleanVar())
-            self.questionnaire_chk.append(tk.Checkbutton(self.questionnaire_window, variable=self.questionnaire_bln[i], text=self.chk_texts[i]))
+            self.questionnaire_chk.append(tk.Checkbutton(self.questionnaire_window, variable=self.questionnaire_bln[i],
+                                                         text=self.chk_texts[i]))
             self.questionnaire_chk[i].grid(column=0, row=row, sticky=tk.W)
 
         row += 1
-        score_lab1 = tk.Label(self.questionnaire_window, text='当てはまらない〜当てはまる', font=("",15))
+        score_lab1 = tk.Label(self.questionnaire_window, text='当てはまらない〜当てはまる', font=("", 15))
         score_lab1.grid(column=2, row=row, columnspan=3)
         row += 1
-        score_lab2 = tk.Label(self.questionnaire_window, text='　 １ 〜 ５', font=("",18))
+        score_lab2 = tk.Label(self.questionnaire_window, text='　 １ 〜 ５', font=("", 18))
         score_lab2.grid(column=2, row=row, columnspan=3)
-
-        self.questionnaire_scale_lab = []
-        self.questionnaire_scale_var = []
-        self.questionnaire_scale = []
-        self.scale_texts = []
-        self.scale_texts.append('ボタンなどの配置が良い')
-        self.scale_texts.append('ログの表示がわかりやすい')
-        self.scale_texts.append('修正画面は操作しやすい')
-        self.scale_texts.append('操作でわからないところがあった')
-        self.scale_texts.append('楽に編集できた')
-        self.scale_texts.append('全体的に使いやすい')
 
         for i in range(len(self.scale_texts)):
             row += 1
             self.questionnaire_scale_lab.append(tk.Label(self.questionnaire_window, text=self.scale_texts[i]))
             self.questionnaire_scale_var.append(tk.DoubleVar())
             self.questionnaire_scale_var[i].set(3)
-            self.questionnaire_scale.append(tk.Scale(self.questionnaire_window, variable=self.questionnaire_scale_var[i],
-                                                     orient=tk.HORIZONTAL,from_=1.0, to=5.0, resolution=0.1,
+            self.questionnaire_scale.append(tk.Scale(self.questionnaire_window,
+                                                     variable=self.questionnaire_scale_var[i],
+                                                     orient=tk.HORIZONTAL, from_=1.0, to=5.0, resolution=0.1,
                                                      activebackground='red'))
             self.questionnaire_scale_lab[i].grid(column=0, row=row, columnspan=2, sticky=tk.E)
             self.questionnaire_scale[i].grid(column=2, row=row, columnspan=3)
@@ -99,18 +109,23 @@ class Questionnaire(tk.Button):
         send_mail_button.place(relx=0.35, rely=0.93, relwidth=0.3)
 
     def send_answer(self):
-        if not messagebox.askyesno(title='アンケート送信', message='アンケートを送信しますか？'):
-            return
-        subject, body = self.create_subject_body()
-        mime = {'type': 'text', 'subtype': 'comma-separated-values'}
         try:
-            os.mkdir(WORK_DIR)
+            if not messagebox.askyesno(title='アンケート送信', message='アンケートを送信しますか？'):
+                return
+            subject, body = self.create_subject_body()
+            mime = {'type': 'text', 'subtype': 'comma-separated-values'}
+            try:
+                os.mkdir(WORK_DIR)
+            except OSError:
+                pass
+            attach_file = self.create_csv_file(output_dir=WORK_DIR)
+            msg = self.create_message(subject, body, mime, attach_file)
+            self.send_mail(msg)
+            shutil.rmtree(WORK_DIR)
         except OSError:
-            pass
-        attach_file = self.create_csv_file(output_dir=WORK_DIR)
-        msg = self.create_message(subject, body, mime, attach_file)
-        self.send_mail(msg)
-        shutil.rmtree(WORK_DIR)
+            self.connection_error_lab = tk.Label(self.questionnaire_window, fg='red', font={"", 10},
+                                                 text='インターネットに接続してください。')
+            self.connection_error_lab.grid(column=2, row=0)
         return
 
     def create_subject_body(self):
@@ -151,7 +166,6 @@ class Questionnaire(tk.Button):
             comment = comment if comment != '' else '--------------'
             writer.writerow({'項目': 'コメント', '回答': comment})
         return file_name
-
 
     def create_message(self, subject, body, mime, attach_file):
         """
