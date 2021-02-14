@@ -1,8 +1,10 @@
 import tkinter as tk
 
+
 class ClassFrame(tk.Frame):
     def __init__(self, master, bg=None, width=None, height=None):
         super().__init__(master, bg=bg, width=width, height=height)
+
 
 class LogFrame(ClassFrame):
     def __init__(self, master, log_max, bg=None, width=None, height=None):
@@ -48,9 +50,11 @@ class LogFrame(ClassFrame):
             self.canvas.yview_scroll(1, 'units')
 
     # ログのセット
-    def set_log(self, log_text):
-        if len(self.log_vars) > 1 and str(self.log_vars[0].get()) == log_text:
-            return
+    def set_log(self, log_text, repeat=True):
+        # 繰り返ししない場合
+        if not repeat:
+            if len(self.log_vars) > 1 and str(self.log_vars[0].get()) == log_text:
+                return
         # ログの行数が最大値未満の場合
         if len(self.log_vars) < self.log_max:
             # ログのテキストを入れる変数を追加する
@@ -86,11 +90,9 @@ class LogFrame(ClassFrame):
         return
 
     # 進捗ログのセット
-    def set_progress_log(self, text, i, sum):
-        before_progress = int((i - 1) * 100 / sum)
-        current_progress = int(i * 100 / sum)
-        if  current_progress != before_progress:
-            self.set_log(text + '{:>3}'.format(current_progress) + '%完了')
+    def set_progress_log(self, text, i, tasks):
+        progress = int(i * 100 / tasks)
+        self.set_log(text + '{:>3}'.format(progress) + '%完了', repeat=False)
         return
 
     # ログのリセット

@@ -4,6 +4,7 @@ import time
 import threading
 import subprocess
 import simpleaudio
+from simpleaudio._simpleaudio import SimpleaudioError
 import shutil
 from imageio.plugins.ffmpeg import FfmpegFormat
 import imageio
@@ -41,9 +42,12 @@ class Audio_player():
             print(e)
 
     def play(self):
-        wav_obj = simpleaudio.WaveObject.from_wave_file(self.audio)
-        self.play_obj = wav_obj.play()
-        self.play_obj.wait_done()
+        try:
+            wav_obj = simpleaudio.WaveObject.from_wave_file(self.audio)
+            self.play_obj = wav_obj.play()
+            self.play_obj.wait_done()
+        except SimpleaudioError as e:
+            print(e)
 
     def stop(self):
         try:
