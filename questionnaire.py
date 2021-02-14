@@ -28,6 +28,7 @@ class Questionnaire(tk.Button):
             text="アンケート",
             command=self.questionnaire,
         )
+        self.master = master
         self.smtp_host = 'smtp.gmail.com'
         self.smtp_port = 465
         self.user_name = secret.GMAIL
@@ -50,6 +51,7 @@ class Questionnaire(tk.Button):
         self.scale_texts.append('ボタンなどの配置が良い')
         self.scale_texts.append('ログの表示がわかりやすい')
         self.scale_texts.append('修正画面は操作しやすい')
+        self.scale_texts.append('修正画面でのキーボード操作は使いやすい')
         self.scale_texts.append('操作でわからないところがあった')
         self.scale_texts.append('楽に編集できた')
         self.scale_texts.append('全体的に使いやすい')
@@ -60,17 +62,21 @@ class Questionnaire(tk.Button):
         self.connection_error_lab = None
 
     def questionnaire(self):
-        self.questionnaire_window = tk.Toplevel()
+        self.questionnaire_window = tk.Toplevel(self.master)
         self.questionnaire_window.title('アンケート')
         self.questionnaire_window.configure(borderwidth=10, relief=tk.RIDGE)
         self.questionnaire_window.geometry('500x600')
         self.questionnaire_window.resizable(False, False)
+        self.questionnaire_window.protocol("WM_DELETE_WINDOW", self.questionnaire_window.destroy)
         # 名前
         row = 0
         reporter_lab = tk.Label(self.questionnaire_window, text='お名前')
         reporter_lab.grid(column=0, row=row, sticky=tk.W)
         self.reporter_textbox = tk.Entry(self.questionnaire_window, width=20)
         self.reporter_textbox.grid(column=0, row=row, columnspan=2, sticky=tk.E)
+
+        self.questionnaire_bln = []
+        self.questionnaire_chk = []
 
         for i in range(len(self.chk_texts)):
             row += 1
@@ -86,6 +92,10 @@ class Questionnaire(tk.Button):
         score_lab2 = tk.Label(self.questionnaire_window, text='　 １ 〜 ５', font=("", 18))
         score_lab2.grid(column=2, row=row, columnspan=3)
 
+        self.questionnaire_scale_lab = []
+        self.questionnaire_scale_var = []
+        self.questionnaire_scale = []
+
         for i in range(len(self.scale_texts)):
             row += 1
             self.questionnaire_scale_lab.append(tk.Label(self.questionnaire_window, text=self.scale_texts[i]))
@@ -99,7 +109,8 @@ class Questionnaire(tk.Button):
             self.questionnaire_scale[i].grid(column=2, row=row, columnspan=3)
 
         # コメント
-        self.questionnaire_comment_lab = tk.Label(self.questionnaire_window, text='コメント(要望や感想などをお願いします。)')
+        self.questionnaire_comment_lab = tk.Label(self.questionnaire_window,
+                                                  text='コメント(要望や感想、エラーなどをお願いします。)')
         self.questionnaire_comment_box = ScrolledText(self.questionnaire_window, font=("", 15), height=5, width=45)
         self.questionnaire_comment_lab.place(relx=0, rely=0.7)
         self.questionnaire_comment_box.place(relx=0, rely=0.75)
@@ -201,6 +212,7 @@ class Questionnaire(tk.Button):
         smtp.close()
         self.questionnaire_window.destroy()
         return
+
 
 # main_window = tk.Tk()
 # main_window.title('hello')

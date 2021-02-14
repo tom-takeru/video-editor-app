@@ -24,7 +24,7 @@ class Guide(tk.Button):
         else:
             self.exist_window = True
             self.guide_window = tk.Toplevel(self.master)
-            self.guide_window.title('操作コマンド一覧')
+            self.guide_window.title('キーボード操作一覧')
             self.guide_window.configure(borderwidth=10, relief=tk.RIDGE)
             self.guide_window.geometry('450x200' + '+' + str(MAIN_WINDOW_WIDTH-450) + '+' + str(0))
             self.guide_window.resizable(False, False)
