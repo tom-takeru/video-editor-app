@@ -166,13 +166,15 @@ class Questionnaire(tk.Button):
         for i in range(len(self.scale_texts)):
             body += self.scale_texts[i] + '　' * (texts_max_len-len(self.scale_texts[i]))
             body += str(self.questionnaire_scale_var[i].get()) + '\n'
-        body += '\n'
-        body += 'コメント\n'
+        body += '\n\n'
+        body += 'コメント\n\n「'
         comment = self.questionnaire_comment_box.get('1.0', 'end -1c')
         body += comment if comment != '' else '--------------'
-        body += '\n'
-        body += 'OSバージョン: ' + platform.platform(terse=True)
-        body += '\n\n\n'
+        body += '」\n'
+        body += '-----------------------------------------------\n'
+        body += 'OSバージョン: ' + platform.platform(terse=True) + '\n'
+        body += '-----------------------------------------------\n'
+        body += '\n\n'
         return subject, body
 
     def create_csv_file(self, output_dir):
